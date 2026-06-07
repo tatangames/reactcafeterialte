@@ -1,6 +1,7 @@
 // CODIGO
 
 import axios from "axios";
+import {InformacionAdministradorResponse} from "../types/interfaces.ts";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 
@@ -12,6 +13,13 @@ const api = axios.create({
     "Accept": "application/json",
   },
 });
+
+
+
+// ************************  SECCION - LOGIN ************************************************
+// ==========================================================================================
+
+
 
 
 // INICIO DE SESION
@@ -86,8 +94,6 @@ export const confirmResetPassword = async (
 };
 
 
-
-
 export const getMe = async (token: string) => {
   const { data } = await api.get("/me", {
     headers: {
@@ -97,6 +103,11 @@ export const getMe = async (token: string) => {
   return data;
 };
 
+
+
+
+// ************************  SECCION - ROLES Y PERMISOS ***************************************************************************
+// ================================================================================================================================
 
 
 // ROLES - SOLO LISTADO
@@ -293,19 +304,91 @@ export const crearUsuario = async (
 };
 
 
-export interface InformacionAdministradorResponse {
-  success: number;
-  info: {
-    id: number;
-    nombre: string;
-    email: string;
-    estado: boolean;
-  };
-  roles: {
-    [key: string]: string;
-  };
-  rol_actual: string;
-}
+
+// ************************  SECCION - UNIDAD DE MEDIDA ***************************************************************************
+// ================================================================================================================================
+
+
+// LISTADO DE UNIDAD DE MEDIDA
+export const getUnidadMedidaTable = async (token: string) => {
+    const { data } = await api.get(
+        `/admin/unidadmedida/tabla`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// CREAR UNIDAD DE MEDIDA
+export const crearUnidadMedida = async (
+    token: string,
+    payload: { nombre: string }
+) => {
+    const { data } = await api.post(
+        `/admin/unidadmedida/nuevo`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// ACTUALIZAR UNIDAD DE MEDIDA
+export const actualizarUnidadMedida = async (
+    token: string,
+    id: number,
+    payload: {
+        nombre: string;
+        estado: boolean;
+    }
+) => {
+    const { data } = await api.put(
+        `/admin/unidadmedida/actualizar/${id}`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // INFORMACION DE ADMINISTRADOR
 export const informacionAdministrador = async (
@@ -434,63 +517,6 @@ export const actualizarCategoria = async (
 
 
 
-
-// LISTADO DE UNIDAD DE MEDIDA
-export const getUnidadMedidaTable = async (token: string) => {
-  const { data } = await api.get(
-    `/admin/unidadmedida/tabla`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
-
-// CREAR UNIDAD DE MEDIDA
-export const crearUnidadMedida = async (
-  token: string,
-  payload: { nombre: string }
-) => {
-  const { data } = await api.post(
-    `/admin/unidadmedida/nuevo`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
-
-// ACTUALIZAR UNIDAD DE MEDIDA
-export const actualizarUnidadMedida = async (
-  token: string,
-  id: number,
-  payload: {
-    nombre: string;
-    estado: boolean;
-  }
-) => {
-  const { data } = await api.put(
-    `/admin/unidadmedida/actualizar/${id}`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
 
 
 

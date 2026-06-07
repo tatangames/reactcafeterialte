@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-
+import type { Permiso } from "../../types/interfaces";
 import {
     getPermisosTable,
     borrarPermisoGlobal,
@@ -8,10 +8,7 @@ import {
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
 
-interface Permiso {
-    id: number;
-    name: string;
-}
+
 
 export function usePermisos() {
     const [data, setData] = useState<Permiso[]>([]);
@@ -37,6 +34,7 @@ export function usePermisos() {
             if (!token) throw new Error("Token no encontrado");
 
             const response = await getPermisosTable(token);
+            console.log(response);
             setData(response.permisos);
         } catch (error) {
             console.error(error);

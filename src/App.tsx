@@ -20,6 +20,7 @@ import Roles from "./pages/RolesPermisos/Roles.tsx";
 import RolesPermisos from "./pages/RolesPermisos/RolesPermisos.tsx";
 import PermisosTodos from "./pages/RolesPermisos/PermisosTodos.tsx";
 import Usuarios from "./pages/RolesPermisos/Usuarios.tsx";
+import UnidadMedidaConfig from "./pages/Configuracion/UnidadMedida/UnidadMedida.tsx";
 
 export default function App() {
   return (
@@ -100,7 +101,15 @@ export default function App() {
                       }
                   />
 
-
+                  { /* UNIDAD DE MEDIDA */}
+                  <Route
+                      path="/admin/unidadmedida/index"
+                      element={
+                          <PermissionRoute>
+                              <UnidadMedidaConfig />
+                          </PermissionRoute>
+                      }
+                  />
 
               </Route>
             </Route>

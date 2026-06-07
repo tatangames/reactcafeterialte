@@ -3,12 +3,8 @@ import DataTable, { TableColumn } from "react-data-table-component";
 import LoadingModal from "../../components/Loading/LoadingModal";
 import ConfirmDeleteModal from "../../components/modal/ConfirmDeleteModal";
 import NuevoPermisoModal from "../../components/modal/NuevoPermisoModal";
-import { usePermisos } from "../../hooks/rolesypermisos/permisosTodosHook.ts";
-
-interface Permiso {
-  id: number;
-  name: string;
-}
+import { usePermisos } from "../../hooks/rolesypermisos/usePermisosTodosHook.ts";
+import type { Permiso } from "../../types/interfaces";
 
 export default function PermisosTodos() {
   const {
@@ -38,6 +34,11 @@ export default function PermisosTodos() {
     {
       name: "Permiso",
       selector: (row) => row.name,
+      sortable: true,
+    },
+    {
+      name: "Descripción",
+      selector: (row) => row.description,
       sortable: true,
     },
     {
@@ -118,6 +119,8 @@ export default function PermisosTodos() {
                 paginationComponentOptions={{
                   rowsPerPageText: "Filas por página",
                   rangeSeparatorText: "de",
+                  selectAllRowsItem: true,
+                  selectAllRowsItemText: "Todos",
                 }}
             />
           </div>

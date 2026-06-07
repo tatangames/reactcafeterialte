@@ -29,12 +29,12 @@ const navItems: NavItem[] = [
       {
         name: "Roles",
         path: "/admin/roles",
-        pro: false
+
       },
       {
         name: "Usuarios",
         path: "/admin/usuarios",
-        pro: false
+
       }
     ],
   },
@@ -44,6 +44,25 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     path: "/dashboard",
   },
+
+  {
+    name: "Configuración",
+    icon:  <CustomIcon
+        src="/images/sidebar/config-user.svg"
+        alt="Configuración"
+    />,
+    subItems: [
+      {
+        name: "Unidad de Medida",
+        path: "/admin/unidadmedida/index",
+
+      },
+
+    ],
+  },
+
+
+
 ];
 
 const AppSidebar: React.FC = () => {

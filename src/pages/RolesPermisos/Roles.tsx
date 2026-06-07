@@ -131,6 +131,12 @@ export default function Roles() {
                     No hay registros para mostrar
                   </div>
                 }
+                paginationComponentOptions={{
+                    rowsPerPageText: "Filas por página",
+                    rangeSeparatorText: "de",
+                    selectAllRowsItem: true,
+                    selectAllRowsItemText: "Todos",
+                }}
             />
           </div>
         </div>
