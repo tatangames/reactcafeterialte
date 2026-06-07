@@ -15,6 +15,11 @@ import Dashboard from "./pages/Dashboard/Home";
 import PublicRoute from "./components/auth/PublicRoute.tsx";
 import ResetPasswordConfirm from "./pages/AuthPages/ResetPasswordConfirm.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
+import {PermissionRoute} from "./components/auth/PermissionRoute.tsx";
+import Roles from "./pages/RolesPermisos/Roles.tsx";
+import RolesPermisos from "./pages/RolesPermisos/RolesPermisos.tsx";
+import PermisosTodos from "./pages/RolesPermisos/PermisosTodos.tsx";
+import Usuarios from "./pages/RolesPermisos/Usuarios.tsx";
 
 export default function App() {
   return (
@@ -61,6 +66,39 @@ export default function App() {
 
 
 
+                {/* ROLES */}
+                <Route
+                    path="/admin/roles"
+                    element={
+                        <PermissionRoute permission="admin.sidebar.roles.y.permisos">
+                        <Roles />
+                      </PermissionRoute>
+                    }
+                />
+                {/* ROLES -> PERMISOS */}
+                <Route
+                    path="/admin/roles/:id/permisos"
+                    element={<RolesPermisos />}
+                />
+                {/* LISTADO DE PERMISOS */}
+                <Route
+                    path="/admin/permisos-todos"
+                    element={
+                      <PermissionRoute>
+                        <PermisosTodos />
+                      </PermissionRoute>
+                    }
+                />
+
+                  {/* LISTADO DE USUARIOS */}
+                  <Route
+                      path="/admin/usuarios"
+                      element={
+                          <PermissionRoute>
+                              <Usuarios />
+                          </PermissionRoute>
+                      }
+                  />
 
 
 

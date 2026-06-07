@@ -9,6 +9,7 @@ import { logout } from "../services/api";
 import { clearAuth, getToken } from "../utils/auth";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import CustomIcon from "../components/sidebar/CustomIcon.tsx";
 
 type NavItem = {
   name: string;
@@ -18,6 +19,26 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  {
+    name: "Roles y Permisos",
+    icon:  <CustomIcon
+        src="/images/sidebar/config-user.svg"
+        alt="Roles y Permisos"
+    />,
+    subItems: [
+      {
+        name: "Roles",
+        path: "/admin/roles",
+        pro: false
+      },
+      {
+        name: "Usuarios",
+        path: "/admin/usuarios",
+        pro: false
+      }
+    ],
+  },
+
   {
     icon: <GridIcon />,
     name: "Dashboard",

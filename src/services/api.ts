@@ -239,10 +239,10 @@ export const borrarPermisoGlobal = async (token: string, idpermiso: number) => {
 };
 
 // CREAR UN NUEVO PERMISO
-export const crearNuevoPermiso = async (token: string, nombre: string) => {
+export const crearNuevoPermiso = async (token: string, nombre: string, descripcion?: string) => {
   const { data } = await api.post(
     "/admin/permisos/extra-nuevo",
-    { nombre },
+    { nombre , descripcion },
     {
       headers: {
         Authorization: `Bearer ${token}`,
