@@ -1,7 +1,7 @@
 // CODIGO
 
 import axios from "axios";
-import {InformacionAdministradorResponse} from "../types/interfaces.ts";
+import {InformacionAdministradorResponseInterface} from "../types/interfaces.ts";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 
@@ -368,6 +368,65 @@ export const actualizarUnidadMedida = async (
 
 
 
+// ************************  SECCION - CREAR CATEGORIAS ***************************************************************************
+// ================================================================================================================================
+
+// LISTADO DE CATEGORIAS
+export const getCategoriasTable = async (token: string) => {
+    const { data } = await api.get(
+        `/admin/categorias/tabla`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// CREAR CATEGORIA
+export const crearCategoria = async (
+    token: string,
+    payload: { nombre: string }
+) => {
+    const { data } = await api.post(
+        `/admin/categorias/nuevo`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// ACTUALIZAR CATEGORIA
+export const actualizarCategoria = async (
+    token: string,
+    id: number,
+    payload: {
+        nombre: string;
+        estado: boolean;
+    }
+) => {
+    const { data } = await api.put(
+        `/admin/categorias/actualizar/${id}`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
 
 
 
@@ -394,7 +453,7 @@ export const actualizarUnidadMedida = async (
 export const informacionAdministrador = async (
   token: string,
   id: number
-): Promise<InformacionAdministradorResponse> => {
+): Promise<InformacionAdministradorResponseInterface> => {
   try {
     const { data } = await api.post(
       "/admin/informacion/administrador",
@@ -455,63 +514,6 @@ export const actualizarAdministrador = async (
   }
 };
 
-
-// LISTADO DE CATEGORIAS
-export const getCategoriasTable = async (token: string) => {
-  const { data } = await api.get(
-    `/admin/categorias/tabla`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
-
-// CREAR CATEGORIA
-export const crearCategoria = async (
-  token: string,
-  payload: { nombre: string }
-) => {
-  const { data } = await api.post(
-    `/admin/categorias/nuevo`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
-
-// ACTUALIZAR CATEGORIA
-export const actualizarCategoria = async (
-  token: string,
-  id: number,
-  payload: {
-    nombre: string;
-    estado: boolean;
-  }
-) => {
-  const { data } = await api.put(
-    `/admin/categorias/actualizar/${id}`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    }
-  );
-
-  return data;
-};
 
 
 

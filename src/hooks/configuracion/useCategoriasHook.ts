@@ -2,41 +2,39 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 import {
-    getUnidadMedidaTable,
-    crearUnidadMedida,
-    actualizarUnidadMedida,
+    getCategoriasTable,
+    crearCategoria,
+    actualizarCategoria,
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
-import {UnidadMedidaInterface} from "../../types/interfaces.ts";
+import { CategoriasInterface } from "../../types/interfaces";
 
-
-
-export function useUnidadMedida() {
-    const [data, setData] = useState<UnidadMedidaInterface[]>([]);
+export function useCategorias() {
+    const [data, setData] = useState<CategoriasInterface[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterText, setFilterText] = useState("");
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedUnidad, setSelectedUnidad] = useState<UnidadMedidaInterface | null>(null);
+    const [selectedCategoria, setSelectedCategoria] = useState<CategoriasInterface | null>(null);
 
     const [isCreating, setIsCreating] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
-        fetchUnidades();
+        fetchCategorias();
     }, []);
 
-    const fetchUnidades = async () => {
+    const fetchCategorias = async () => {
         try {
             const token = getToken();
             if (!token) throw new Error("Token no encontrado");
 
-            const response = await getUnidadMedidaTable(token);
+            const response = await getCategoriasTable(token);
             setData(response);
         } catch (error) {
             console.error(error);
-            toast.error("Error al cargar unidades de medida");
+            toast.error("Error al cargar categorías");
         } finally {
             setLoading(false);
         }
@@ -46,17 +44,17 @@ export function useUnidadMedida() {
         setIsCreating(true);
         try {
             const token = getToken();
-            const response = await crearUnidadMedida(token!, { nombre });
+            const response = await crearCategoria(token!, { nombre });
 
-            toast.success(response.message || "Unidad de medida creada correctamente");
+            toast.success(response.message || "Categoría creada correctamente");
             setIsCreateModalOpen(false);
-            fetchUnidades();
+            fetchCategorias();
         } catch (error: any) {
             if (error.response?.data?.errors) {
                 const firstError = Object.values(error.response.data.errors)[0];
                 toast.error((firstError as string[])[0]);
             } else {
-                toast.error(error.response?.data?.message || "Error al crear unidad de medida");
+                toast.error(error.response?.data?.message || "Error al crear categoría");
             }
         } finally {
             setIsCreating(false);
@@ -67,26 +65,26 @@ export function useUnidadMedida() {
         setIsUpdating(true);
         try {
             const token = getToken();
-            const response = await actualizarUnidadMedida(token!, id, datos);
+            const response = await actualizarCategoria(token!, id, datos);
 
-            toast.success(response.message || "Unidad de medida actualizada correctamente");
+            toast.success(response.message || "Categoría actualizada correctamente");
             setIsEditModalOpen(false);
-            setSelectedUnidad(null);
-            fetchUnidades();
+            setSelectedCategoria(null);
+            fetchCategorias();
         } catch (error: any) {
             if (error.response?.data?.errors) {
                 const firstError = Object.values(error.response.data.errors)[0];
                 toast.error((firstError as string[])[0]);
             } else {
-                toast.error(error.response?.data?.message || "Error al actualizar unidad de medida");
+                toast.error(error.response?.data?.message || "Error al actualizar categoría");
             }
         } finally {
             setIsUpdating(false);
         }
     };
 
-    const handleEdit = (row: UnidadMedidaInterface) => {
-        setSelectedUnidad(row);
+    const handleEdit = (row: CategoriasInterface) => {
+        setSelectedCategoria(row);
         setIsEditModalOpen(true);
     };
 
@@ -95,27 +93,22 @@ export function useUnidadMedida() {
     );
 
     return {
-        // datos
         filteredData,
         loading,
         filterText,
         setFilterText,
 
-        // modales
         isCreateModalOpen,
         setIsCreateModalOpen,
         isEditModalOpen,
         setIsEditModalOpen,
 
-        // seleccionado
-        selectedUnidad,
-        setSelectedUnidad,
+        selectedCategoria,
+        setSelectedCategoria,
 
-        // estados de carga
         isCreating,
         isUpdating,
 
-        // handlers
         handleCreate,
         handleUpdate,
         handleEdit,

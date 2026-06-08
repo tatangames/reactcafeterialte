@@ -3,11 +3,7 @@ import { Modal } from "../ui/modal";
 import { getPermisosTable } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import toast from "react-hot-toast";
-
-interface Permiso {
-  id: number;
-  name: string;
-}
+import {PermisoInterface} from "../../types/interfaces.ts";
 
 interface Props {
   isOpen: boolean;
@@ -24,7 +20,7 @@ export default function AgregarPermisoModal({
                                               isAdding,
                                               permisosAsignados,
                                             }: Props) {
-  const [permisos, setPermisos] = useState<Permiso[]>([]);
+  const [permisos, setPermisos] = useState<PermisoInterface[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +42,7 @@ export default function AgregarPermisoModal({
 
       // 🔥 solo permisos NO asignados
       const disponibles = res.permisos.filter(
-        (p: Permiso) => !permisosAsignados.includes(p.id)
+        (p: PermisoInterface) => !permisosAsignados.includes(p.id)
       );
 
       setPermisos(disponibles);

@@ -1,10 +1,10 @@
-export interface Permiso {
+export interface PermisoInterface {
     id: number;
     name: string;
     description: string;
 }
 
-export interface InformacionAdministradorResponse {
+export interface InformacionAdministradorResponseInterface {
     success: number;
     info: {
         id: number;
@@ -16,4 +16,16 @@ export interface InformacionAdministradorResponse {
         [key: string]: string;
     };
     rol_actual: string;
+}
+
+export interface UnidadMedidaInterface {
+    id: number;
+    nombre: string;
+    estado: boolean;
+}
+
+export interface CategoriasInterface {
+    id: number;
+    nombre: string;
+    estado: boolean;
 }

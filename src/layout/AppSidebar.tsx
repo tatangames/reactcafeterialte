@@ -57,7 +57,11 @@ const navItems: NavItem[] = [
         path: "/admin/unidadmedida/index",
 
       },
+      {
+        name: "Categorias",
+        path: "/admin/categorias/index",
 
+      },
     ],
   },
 
