@@ -21,8 +21,6 @@ const api = axios.create({
 // ==========================================================================================
 
 
-
-
 // INICIO DE SESION
 export const loginApi = async (email: string, password: string) => {
   const { data } = await api.post("/login", {
@@ -432,9 +430,6 @@ export const actualizarCategoria = async (
 
 
 
-
-
-
 // INFORMACION DE ADMINISTRADOR
 export const informacionAdministrador = async (
     token: string,
@@ -577,11 +572,44 @@ export const actualizarProducto = async (
 
 
 
+// ************************  SECCION - INVENTARIO  ******************
+// =================================================================
 
+export const getInventarioStock = async (token: string) => {
+    const { data } = await api.get('/inventario/stock', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
 
+export const getInventarioEntradas = async (token: string) => {
+    const { data } = await api.get('/inventario/entradas', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
 
+export const getInventarioEntrada = async (token: string, id: number) => {
+    const { data } = await api.get(`/inventario/entradas/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
 
-
+export const registrarEntradaInventario = async (
+    token: string,
+    payload: {
+        fecha: string;
+        tipo: string;
+        descripcion?: string;
+        items: { producto_id: number; cantidad: number }[];
+    }
+) => {
+    const { data } = await api.post('/inventario/entradas/registrar', payload, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
 
 
 

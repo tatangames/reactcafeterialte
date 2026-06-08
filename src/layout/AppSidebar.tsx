@@ -57,8 +57,16 @@ const navItems: NavItem[] = [
         path: "/admin/productos/index",
 
       },
+      {
+        name: "Inventarios",
+        path: "/admin/inventario",
+
+      },
     ],
   },
+
+
+
 
 
   {

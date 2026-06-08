@@ -25,6 +25,10 @@ import CategoriasConfig from "./pages/Configuracion/Categorias/Categorias.tsx";
 import ProductosCatalogo from "./pages/Productos/ProductosCatalogo.tsx";
 import ProductoRegistro from "./pages/Productos/ProductoRegistro.tsx";
 import ProductoEditar from "./pages/Productos/ProductoEditar.tsx";
+import Inventario from "./pages/Inventario/Inventario.tsx";
+import InventarioStock from "./pages/Inventario/Inventario.tsx";
+import InventarioEntradas from "./pages/Inventario/InventarioEntradas.tsx";
+import InventarioNuevoRegistro from "./pages/Inventario/InventarioNuevoRegistro.tsx";
 
 
 export default function App() {
@@ -124,7 +128,7 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
-                  { /* PRODUCTOS REGISTRO/CATALOGO */}
+                  { /* PRODUCTOS CATALOGO */}
                   <Route
                       path="/admin/productos/index"
                       element={
@@ -133,6 +137,7 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
+                  { /* PRODUCTOS REGISTRO */}
                   <Route
                       path="/admin/productos/registro"
                       element={
@@ -141,7 +146,7 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
-
+                  { /* PRODUCTOS EDITAR */}
                   <Route
                       path="/admin/productos/editar/:id"
                       element={
@@ -151,8 +156,20 @@ export default function App() {
                       }
                   />
 
+                  { /* INVENTARIO */}
+                  <Route
+                      path="/admin/inventario"
+                      element={
+                          <PermissionRoute>
+                              <Inventario />
+                          </PermissionRoute>
+                      }
+                  />
 
 
+                  <Route path="/admin/inventario" element={<PermissionRoute><InventarioStock /></PermissionRoute>} />
+                  <Route path="/admin/inventario/entradas" element={<PermissionRoute><InventarioEntradas /></PermissionRoute>} />
+                  <Route path="/admin/inventario/entradas/nuevo" element={<PermissionRoute><InventarioNuevoRegistro /></PermissionRoute>} />
 
 
               </Route>
