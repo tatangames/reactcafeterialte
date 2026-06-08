@@ -3,7 +3,8 @@ import DataTable from "react-data-table-component";
 import LoadingModal from "../../../components/Loading/LoadingModal";
 import EntidadNombreModal from "../../../components/modal/EntidadNombreModal";
 import EntidadNombreEstadoModal from "../../../components/modal/EntidadNombreEstadoModal";
-import { useUnidadMedida, UnidadMedida } from "../../../hooks/configuracion/useUnidadMedidaHook.ts";
+import { useUnidadMedida } from "../../../hooks/configuracion/useUnidadMedidaHook.ts";
+import { UnidadMedidaInterface } from "../../../types/interfaces.ts";
 
 export default function UnidadMedidaConfig() {
     const {
@@ -27,20 +28,20 @@ export default function UnidadMedidaConfig() {
     const columns = [
         {
             name: "ID",
-            selector: (row: UnidadMedida) => row.id,
+            selector: (row: UnidadMedidaInterface) => row.id,
             sortable: true,
             width: "80px",
         },
         {
             name: "Nombre",
-            selector: (row: UnidadMedida) => row.nombre,
+            selector: (row: UnidadMedidaInterface) => row.nombre,
             sortable: true,
         },
         {
             name: "Estado",
             width: "120px",
             sortable: true,
-            cell: (row: UnidadMedida) => (
+            cell: (row: UnidadMedidaInterface) => (
                 <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
                     row.estado ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                 }`}>
@@ -51,7 +52,7 @@ export default function UnidadMedidaConfig() {
         {
             name: "Acciones",
             width: "120px",
-            cell: (row: UnidadMedida) => (
+            cell: (row: UnidadMedidaInterface) => (
                 <div className="flex justify-center">
                     <button
                         onClick={() => handleEdit(row)}

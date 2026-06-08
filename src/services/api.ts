@@ -4,6 +4,7 @@ import axios from "axios";
 import {InformacionAdministradorResponseInterface} from "../types/interfaces.ts";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+export const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage/archivos/";
 
 // Crear instancia de axios
 const api = axios.create({
@@ -434,85 +435,159 @@ export const actualizarCategoria = async (
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // INFORMACION DE ADMINISTRADOR
 export const informacionAdministrador = async (
-  token: string,
-  id: number
+    token: string,
+    id: number
 ): Promise<InformacionAdministradorResponseInterface> => {
-  try {
-    const { data } = await api.post(
-      "/admin/informacion/administrador",
-      { id },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    try {
+        const { data } = await api.post(
+            "/admin/informacion/administrador",
+            { id },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
 
-    // Validación del backend
-    if (data.success !== 1) {
-      throw new Error("No se pudo obtener la información del administrador");
+        // Validación del backend
+        if (data.success !== 1) {
+            throw new Error("No se pudo obtener la información del administrador");
+        }
+
+        return data;
+    } catch (error: any) {
+        console.error("Error informacionAdministrador:", error);
+        throw error.response?.data?.message || "Error al obtener la información";
     }
-
-    return data;
-  } catch (error: any) {
-    console.error("Error informacionAdministrador:", error);
-    throw error.response?.data?.message || "Error al obtener la información";
-  }
 };
+
+
+
+// ************************  SECCION - ADMINISTRADOR - PERFIL ***************************************************************************
+// ================================================================================================================================
 
 
 // ACTUALIZAR ADMINISTRADOR
 export const actualizarAdministrador = async (
-  token: string,
-  id: number,
-  datos: {
-    nombre: string;
-    email: string;
-    password?: string;
-    rol: string;
-    estado: boolean;
-  }
+    token: string,
+    id: number,
+    datos: {
+        nombre: string;
+        email: string;
+        password?: string;
+        rol: string;
+        estado: boolean;
+    }
 ) => {
-  try {
-    const { data } = await api.put(
-      `/admin/actualizar/administrador/${id}`,
-      datos,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+    try {
+        const { data } = await api.put(
+            `/admin/actualizar/administrador/${id}`,
+            datos,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        if (data.success !== 1) {
+            throw new Error(data.message || "Error al actualizar");
+        }
+
+        return data;
+    } catch (error: any) {
+        if (error.response?.status === 422) {
+            throw error.response.data.errors; // para mostrar en inputs
+        }
+        throw error.response?.data?.message || "Error del servidor";
+    }
+};
+
+
+
+// ************************  SECCION - PRODUCTOS ***************************************************************************
+// ================================================================================================================================
+
+// LISTADO DE PRODUCTOS
+export const getProductosTable = async (token: string) => {
+    const { data } = await api.get(
+        `/productos/tabla`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
     );
 
-    if (data.success !== 1) {
-      throw new Error(data.message || "Error al actualizar");
-    }
+    return data;
+};
+
+export const registrarProducto = async (
+    token: string,
+    formData: FormData
+) => {
+    const { data } = await api.post(
+        `/productos/registro`,
+        formData,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
+                Accept: "application/json",
+            },
+        }
+    );
 
     return data;
-  } catch (error: any) {
-    if (error.response?.status === 422) {
-      throw error.response.data.errors; // para mostrar en inputs
-    }
-    throw error.response?.data?.message || "Error del servidor";
-  }
 };
+
+
+// OBTENER UN PRODUCTO (para editar)
+export const getProducto = async (token: string, id: number) => {
+    const { data } = await api.get(`/productos/editar/${id}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+        },
+    });
+
+    return data;
+};
+
+// ACTUALIZAR PRODUCTO (con imagen) → multipart/form-data
+export const actualizarProducto = async (
+    token: string,
+    id: number,
+    formData: FormData
+) => {
+    const { data } = await api.post(`/productos/actualizar/${id}`, formData, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+        },
+    });
+
+    return data;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

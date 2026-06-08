@@ -46,6 +46,22 @@ const navItems: NavItem[] = [
   },
 
   {
+    name: "Inventario",
+    icon:  <CustomIcon
+        src="/images/sidebar/config-user.svg"
+        alt="Inventario"
+    />,
+    subItems: [
+      {
+        name: "Catálogo de Productos",
+        path: "/admin/productos/index",
+
+      },
+    ],
+  },
+
+
+  {
     name: "Configuración",
     icon:  <CustomIcon
         src="/images/sidebar/config-user.svg"

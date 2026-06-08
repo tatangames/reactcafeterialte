@@ -29,3 +29,53 @@ export interface CategoriasInterface {
     nombre: string;
     estado: boolean;
 }
+
+export interface ProductoInterface {
+    id: number;
+    sku: string | null;
+    nombre: string;
+    descripcion: string | null;
+    imagen: string | null;
+    tipo: "bien" | "servicio" | "bien_servicio";
+    costo_unitario: string;
+    activo: boolean;
+    unidad_medida: string | null;
+    categorias: string[];
+}
+
+export interface ProductoFormInterface {
+    sku: string;
+    nombre: string;
+    descripcion: string;
+    tipo: "bien" | "servicio" | "bien_servicio";
+    costo_unitario: string;
+    unidad_medida_id: string;
+    categorias: number[];
+    imagen: File | null;
+}
+
+export interface ProductoEditInterface {
+    id: number;
+    sku: string | null;
+    nombre: string;
+    descripcion: string | null;
+    imagen: string | null;
+    tipo: "bien" | "servicio" | "bien_servicio";
+    costo_unitario: string;
+    unidad_medida_id: number;
+    activo: boolean;
+    categorias: number[];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

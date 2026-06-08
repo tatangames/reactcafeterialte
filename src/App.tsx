@@ -22,6 +22,10 @@ import PermisosTodos from "./pages/RolesPermisos/PermisosTodos.tsx";
 import Usuarios from "./pages/RolesPermisos/Usuarios.tsx";
 import UnidadMedidaConfig from "./pages/Configuracion/UnidadMedida/UnidadMedida.tsx";
 import CategoriasConfig from "./pages/Configuracion/Categorias/Categorias.tsx";
+import ProductosCatalogo from "./pages/Productos/ProductosCatalogo.tsx";
+import ProductoRegistro from "./pages/Productos/ProductoRegistro.tsx";
+import ProductoEditar from "./pages/Productos/ProductoEditar.tsx";
+
 
 export default function App() {
   return (
@@ -120,6 +124,36 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
+                  { /* PRODUCTOS REGISTRO/CATALOGO */}
+                  <Route
+                      path="/admin/productos/index"
+                      element={
+                          <PermissionRoute>
+                              <ProductosCatalogo />
+                          </PermissionRoute>
+                      }
+                  />
+                  <Route
+                      path="/admin/productos/registro"
+                      element={
+                          <PermissionRoute>
+                              <ProductoRegistro />
+                          </PermissionRoute>
+                      }
+                  />
+
+                  <Route
+                      path="/admin/productos/editar/:id"
+                      element={
+                          <PermissionRoute>
+                              <ProductoEditar />
+                          </PermissionRoute>
+                      }
+                  />
+
+
+
+
 
               </Route>
             </Route>
