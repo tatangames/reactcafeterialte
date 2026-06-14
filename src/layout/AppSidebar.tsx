@@ -86,6 +86,11 @@ const navItems: NavItem[] = [
         path: "/admin/categorias/index",
 
       },
+      {
+        name: "Impresoras",
+        path: "/admin/impresoras/index",
+
+      },
     ],
   },
 
@@ -94,7 +99,7 @@ const navItems: NavItem[] = [
 ];
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { setUser } = useAuth();
@@ -138,6 +143,13 @@ const AppSidebar: React.FC = () => {
       }
     }
   }, [openSubmenu]);
+
+  // 2. Cierra el sidebar mobile al navegar
+  useEffect(() => {
+    if (isMobileOpen) {
+      toggleMobileSidebar();
+    }
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -241,14 +253,31 @@ const AppSidebar: React.FC = () => {
       >
         {/* Logo */}
         <div className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
-          <Link to="/dashboard">
+          <Link to="/dashboard" className="flex items-center gap-3">
             {isExpanded || isHovered || isMobileOpen ? (
                 <>
-                  <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
-                  <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
+                  <img
+                      className="dark:hidden shrink-0"
+                      src="/images/logo/logoeci.png"
+                      alt="Logo"
+                      width={40}
+                      height={40}
+                  />
+
+                  <img
+                      className="hidden dark:block shrink-0"
+                      src="/images/logo/logoeci.png"
+                      alt="Logo"
+                      width={40}
+                      height={40}
+                  />
+
+                  <span className="text-[16px] font-semibold text-gray-800 dark:text-white whitespace-nowrap">
+          Panadería Eduardo
+        </span>
                 </>
             ) : (
-                <img src="/images/logo/logo-icon.svg" alt="Logo" width={32} height={32} />
+                <img src="/images/logo/logoeci.png" alt="Logo" width={32} height={32} />
             )}
           </Link>
         </div>

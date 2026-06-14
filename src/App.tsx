@@ -29,7 +29,7 @@ import Inventario from "./pages/Inventario/Inventario.tsx";
 import InventarioStock from "./pages/Inventario/Inventario.tsx";
 import InventarioEntradas from "./pages/Inventario/InventarioEntradas.tsx";
 import InventarioNuevoRegistro from "./pages/Inventario/InventarioNuevoRegistro.tsx";
-
+import Impresoras from "./pages/Configuracion/Impresoras/Impresoras.tsx";
 
 export default function App() {
   return (
@@ -162,6 +162,16 @@ export default function App() {
                       element={
                           <PermissionRoute>
                               <Inventario />
+                          </PermissionRoute>
+                      }
+                  />
+
+                  { /* IMPRESORAS */}
+                  <Route
+                      path="/admin/impresoras/index"
+                      element={
+                          <PermissionRoute>
+                              <Impresoras />
                           </PermissionRoute>
                       }
                   />

@@ -136,7 +136,31 @@ export interface EntradaFormInterface {
 
 
 
+export interface ImpresoraCategoriaInterface {
+    id: number;
+    nombre: string;
+}
 
+export interface ImpresoraInterface {
+    id: number;
+    alias: string;
+    ip_impresora: string;
+    ip_servidor: string;
+    tipo_impresion: 'escpos';
+    cash_drawer: 'ninguno' | 'pin2' | 'pin5';
+    activo: boolean;
+    categorias: ImpresoraCategoriaInterface[];
+}
+
+export interface ImpresoraFormInterface {
+    alias: string;
+    ip_impresora: string;
+    ip_servidor: string;
+    tipo_impresion: 'escpos';
+    cash_drawer: 'ninguno' | 'pin2' | 'pin5';
+    activo: boolean;
+    categorias: number[];
+}
 
 
 
