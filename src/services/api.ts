@@ -502,6 +502,167 @@ export const actualizarAdministrador = async (
 
 
 
+
+// ************************  SECCION - IMPRESORAS  ******************
+// =================================================================
+
+export const getImpresorasTable = async (token: string) => {
+    const { data } = await api.get('/admin/impresora/index', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
+
+export const crearImpresora = async (token: string, payload: ImpresoraFormInterface) => {
+    const { data } = await api.post('/admin/impresora/store', payload, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
+
+export const actualizarImpresora = async (token: string, id: number, payload: ImpresoraFormInterface) => {
+    const { data } = await api.post(`/admin/impresora/${id}/update`, payload, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
+
+export const eliminarImpresora = async (token: string, id: number) => {
+    const { data } = await api.delete(`/admin/impresora/${id}/destroy`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
+
+export const testImpresora = async (token: string, id: number) => {
+    const { data } = await api.post(`/admin/impresora/${id}/test`, {}, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    return data;
+};
+
+
+// ************************  SECCION - PROVEEDORES ***************************************************************************
+// ================================================================================================================================
+
+// LISTADO DE PROVEEDORES
+export const getProveedoresTable = async (token: string) => {
+    const { data } = await api.get(
+        `/admin/proveedores/tabla`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// CREAR PROVEEDOR
+export const crearProveedor = async (
+    token: string,
+    payload: { nombre: string; notas?: string }
+) => {
+    const { data } = await api.post(
+        `/admin/proveedores/nuevo`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+// ACTUALIZAR PROVEEDOR
+export const actualizarProveedor = async (
+    token: string,
+    id: number,
+    payload: {
+        nombre: string;
+        notas?: string;
+        activo: boolean;
+    }
+) => {
+    const { data } = await api.put(
+        `/admin/proveedores/actualizar/${id}`,
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/json",
+            },
+        }
+    );
+
+    return data;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ************************  SECCION - PRODUCTOS ***************************************************************************
 // ================================================================================================================================
 
@@ -610,52 +771,6 @@ export const registrarEntradaInventario = async (
     });
     return data;
 };
-
-
-
-
-// ************************  SECCION - IMPRESORAS  ******************
-// =================================================================
-
-export const getImpresorasTable = async (token: string) => {
-    const { data } = await api.get('/admin/impresora/index', {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    return data;
-};
-
-export const crearImpresora = async (token: string, payload: ImpresoraFormInterface) => {
-    const { data } = await api.post('/admin/impresora/store', payload, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    return data;
-};
-
-export const actualizarImpresora = async (token: string, id: number, payload: ImpresoraFormInterface) => {
-    const { data } = await api.post(`/admin/impresora/${id}/update`, payload, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    return data;
-};
-
-export const eliminarImpresora = async (token: string, id: number) => {
-    const { data } = await api.delete(`/admin/impresora/${id}/destroy`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    return data;
-};
-
-export const testImpresora = async (token: string, id: number) => {
-    const { data } = await api.post(`/admin/impresora/${id}/test`, {}, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    return data;
-};
-
-
-
-
-
 
 
 

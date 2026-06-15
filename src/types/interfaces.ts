@@ -164,7 +164,12 @@ export interface ImpresoraFormInterface {
 
 
 
-
+export interface ProveedorInterface {
+    id: number;
+    nombre: string;
+    notas: string | null;
+    activo: boolean;
+}
 
 
 

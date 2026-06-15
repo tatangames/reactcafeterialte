@@ -79,16 +79,18 @@ const navItems: NavItem[] = [
       {
         name: "Unidad de Medida",
         path: "/admin/unidadmedida/index",
-
       },
       {
         name: "Categorias",
         path: "/admin/categorias/index",
-
       },
       {
         name: "Impresoras",
         path: "/admin/impresoras/index",
+      },
+      {
+        name: "Proveedores",
+        path: "/admin/proveedores/index",
 
       },
     ],

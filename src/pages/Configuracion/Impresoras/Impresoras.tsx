@@ -235,7 +235,7 @@ export default function Impresoras() {
                 <div className="fixed inset-0 z-[999999] flex items-center justify-center">
                     <div className="absolute inset-0 bg-black/50" onClick={cerrarModal} />
 
-                    <div className="relative w-full max-w-md mx-4 bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+                    <div className="relative w-full max-w-lg mx-4 bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
                         <div className="flex items-center justify-between px-6 py-4 bg-[#1e3a5f] rounded-t-xl">
                             <h2 className="text-sm font-bold text-white uppercase tracking-wider">
                                 {isEditing ? "Editar impresora" : "Agregar"}
