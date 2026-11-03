@@ -1,8 +1,7 @@
 import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../../components/Loading/LoadingModal";
-import EntidadNombreModal from "../../../components/modal/EntidadNombreModal";
-import EntidadNombreEstadoModal from "../../../components/modal/EntidadNombreEstadoModal";
+import UnidadMedidaModal from "../../../components/modal/UnidadMedidaModal";
 import { useUnidadMedida } from "../../../hooks/configuracion/useUnidadMedidaHook.ts";
 import { UnidadMedidaInterface } from "../../../types/interfaces.ts";
 
@@ -38,6 +37,27 @@ export default function UnidadMedidaConfig() {
             sortable: true,
         },
         {
+            name: "Abrev.",
+            width: "100px",
+            selector: (row: UnidadMedidaInterface) => row.abreviatura ?? "—",
+        },
+        {
+            name: "Tipo",
+            width: "120px",
+            sortable: true,
+            selector: (row: UnidadMedidaInterface) => ({ unidad: "Por unidad", masa: "Peso", volumen: "Volumen" })[row.tipo],
+        },
+        {
+            name: "Equivalencia",
+            width: "200px",
+            cell: (row: UnidadMedidaInterface) => (
+                <span className="text-sm text-gray-600">
+                    1 {row.abreviatura ?? row.nombre} = {Number(row.factor_base).toLocaleString("en-US", { maximumFractionDigits: 6 })}{" "}
+                    {({ unidad: "u", masa: "g", volumen: "ml" })[row.tipo]}
+                </span>
+            ),
+        },
+        {
             name: "Estado",
             width: "120px",
             sortable: true,
@@ -69,18 +89,15 @@ export default function UnidadMedidaConfig() {
         <>
             <LoadingModal isOpen={loading} text="Cargando unidades de medida..." />
 
-            <EntidadNombreModal
+            <UnidadMedidaModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onConfirm={handleCreate}
                 isLoading={isCreating}
-                title="Nueva Unidad de Medida"
-                placeholder="Nombre de la unidad"
-                maxLength={100}
             />
 
             {selectedUnidad && (
-                <EntidadNombreEstadoModal
+                <UnidadMedidaModal
                     isOpen={isEditModalOpen}
                     onClose={() => {
                         setIsEditModalOpen(false);
@@ -88,10 +105,7 @@ export default function UnidadMedidaConfig() {
                     }}
                     onConfirm={(data) => handleUpdate(selectedUnidad.id, data)}
                     isLoading={isUpdating}
-                    title="Editar Unidad de Medida"
-                    initialNombre={selectedUnidad.nombre}
-                    initialEstado={selectedUnidad.estado}
-                    maxLength={100}
+                    unidad={selectedUnidad}
                 />
             )}
 

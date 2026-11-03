@@ -10,6 +10,7 @@ interface Usuario {
     correo: string;
     rol: string;
     estado: boolean;
+    ultimo_acceso: string | null;
 }
 
 interface NuevoUsuarioForm {
@@ -29,6 +30,14 @@ interface EditarUsuarioForm {
 
 // Helper para extraer el mensaje de error de la respuesta
 const extractErrorMessage = (error: any, fallback: string): string => {
+    if (typeof error === "string") return error;
+    // actualizarAdministrador lanza directamente el objeto "errors" de un 422
+    if (error && !error.response && typeof error === "object" && !(error instanceof Error)) {
+        const firstError = Object.values(error)[0];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+            return firstError[0] as string;
+        }
+    }
     if (error.response?.data?.errors) {
         const firstError = Object.values(error.response.data.errors)[0];
         if (Array.isArray(firstError) && firstError.length > 0) {

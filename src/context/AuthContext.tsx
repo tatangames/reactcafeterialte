@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import axios from 'axios';
 import { getMe } from '../services/api';
 import { getAuth, setAuth as setAuthStorage, clearAuth, User } from '../utils/auth';
 
@@ -32,9 +33,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setAuthStorage(auth.token, auth.tokenType, userData);
                 }
             } catch (error) {
-                console.error('Error loading user:', error);
-                clearAuth();
-                setUser(null);
+                // Solo se cierra la sesión si el servidor rechazó el token (el
+                // interceptor redirige); sin conexión se conservan los datos guardados
+                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                    clearAuth();
+                    setUser(null);
+                } else {
+                    console.error('Error loading user:', error);
+                }
             }
         } else {
             setUser(null);
@@ -49,17 +55,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setUser(auth.user);
             }
             setLoading(false);
+
+            // Refrescar roles y permisos en segundo plano: pudieron cambiar desde el último login
+            if (auth) {
+                refreshUser();
+            }
         };
 
         loadUser();
     }, []);
 
-    const hasPermission = (permission: string): boolean => {
-        return user?.permissions?.includes(permission) ?? false;
-    };
-
     const hasRole = (role: string): boolean => {
         return user?.roles?.includes(role) ?? false;
+    };
+
+    // El rol admin tiene acceso total (igual que Gate::before en el backend)
+    const hasPermission = (permission: string): boolean => {
+        if (hasRole('admin')) return true;
+        return user?.permissions?.includes(permission) ?? false;
     };
 
     const hasAnyPermission = (permissions: string[]): boolean => {

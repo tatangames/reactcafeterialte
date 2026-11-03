@@ -1,7 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
 import LoadingModal from '../../components/Loading/LoadingModal';
-import { useRegistrarEntradaHook } from '../../hooks/inventario/useRegistrarEntradaHook';
+import PageHeader from '../../components/common/PageHeader';
+import MoneyInput from '../../components/form/MoneyInput';
+import { tipoConCosto, useRegistrarEntradaHook } from '../../hooks/inventario/useRegistrarEntradaHook';
+import { cantidad, dinero, hoyLocal, TIPOS_MOVIMIENTO } from '../../utils/formato';
 
 const tipoColors: Record<string, string> = {
     entrada:    'bg-green-600',
@@ -10,11 +13,20 @@ const tipoColors: Record<string, string> = {
     produccion: 'bg-blue-600',
 };
 
+const tipoAyuda: Record<string, string> = {
+    entrada:    'Suma al stock. Si indicas el costo, se recalcula el costo promedio del producto.',
+    salida:     'Resta del stock (consumo interno, regalías...). Las mermas tendrán su propio registro.',
+    ajuste:     'La cantidad es lo que contaste: el stock queda exactamente en ese valor.',
+    produccion: 'Suma producto terminado. El descuento automático de materias primas llega con Recetas.',
+};
+
 export default function InventarioNuevoRegistro() {
     const navigate = useNavigate();
     const {
         form,
         productos,
+        tiposPermitidos,
+        productoDe,
         loadingProductos,
         isSaving,
         handleChange,
@@ -24,23 +36,18 @@ export default function InventarioNuevoRegistro() {
         handleSubmit,
     } = useRegistrarEntradaHook();
 
+    const conCosto = tipoConCosto(form.tipo);
+
     return (
         <>
             <LoadingModal isOpen={loadingProductos} text="Cargando productos..." />
 
             <div className="p-6">
-                <div className="mb-6 flex items-center gap-3">
-                    <button
-                        onClick={() => navigate('/admin/inventario/entradas')}
-                        className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
-                    >
-                        ← Volver
-                    </button>
-                    <div>
-                        <h1 className="text-2xl font-semibold text-gray-800">Nuevo registro de inventario</h1>
-                        <p className="text-sm text-gray-500">Registra entrada, salida o ajuste de stock</p>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Nuevo registro de inventario"
+                    subtitle="Registra entrada, salida, ajuste o producción"
+                    backTo="/admin/inventario/entradas"
+                />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Cabecera */}
@@ -55,6 +62,7 @@ export default function InventarioNuevoRegistro() {
                                 <input
                                     type="date"
                                     value={form.fecha}
+                                    max={hoyLocal()}
                                     onChange={e => handleChange('fecha', e.target.value)}
                                     className="w-full h-[42px] rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
                                 />
@@ -65,38 +73,39 @@ export default function InventarioNuevoRegistro() {
                                     Tipo <span className="text-red-500">*</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {(['entrada', 'salida', 'ajuste', 'produccion'] as const).map(tipo => (
+                                    {tiposPermitidos.map(tipo => (
                                         <button
                                             key={tipo}
                                             type="button"
                                             onClick={() => handleChange('tipo', tipo)}
-                                            className={`py-2 text-sm font-medium rounded-lg border transition capitalize ${
+                                            className={`py-2.5 text-sm font-medium rounded-lg border transition ${
                                                 form.tipo === tipo
                                                     ? `${tipoColors[tipo]} text-white border-transparent`
                                                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                             }`}
                                         >
-                                            {tipo === 'produccion' ? 'Producción' : tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                                            {TIPOS_MOVIMIENTO[tipo]}
                                         </button>
                                     ))}
                                 </div>
-                                {form.tipo === 'ajuste' && (
-                                    <p className="text-xs text-yellow-600 mt-2">
-                                        En ajuste la cantidad es el nuevo stock absoluto del producto.
-                                    </p>
-                                )}
+                                <p className={`text-xs mt-2 ${form.tipo === 'ajuste' ? 'text-yellow-700' : 'text-gray-500'}`}>
+                                    {tipoAyuda[form.tipo]}
+                                </p>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Descripción
+                                    {form.tipo === 'ajuste' ? 'Motivo del ajuste' : 'Descripción'}
+                                    {form.tipo === 'ajuste' && <span className="text-red-500"> *</span>}
                                 </label>
                                 <textarea
                                     value={form.descripcion}
                                     onChange={e => handleChange('descripcion', e.target.value)}
                                     rows={3}
                                     maxLength={500}
-                                    placeholder="Ej: Compra semanal de insumos, merma por vencimiento..."
+                                    placeholder={form.tipo === 'ajuste'
+                                        ? 'Ej: Conteo físico de fin de mes'
+                                        : 'Ej: Compra semanal de insumos'}
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition resize-none"
                                 />
                             </div>
@@ -118,54 +127,74 @@ export default function InventarioNuevoRegistro() {
                             </div>
 
                             {/* Encabezado tabla */}
-                            <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 uppercase px-1">
-                                <div className="col-span-7">Producto</div>
-                                <div className="col-span-3">Cantidad</div>
-                                <div className="col-span-2"></div>
+                            <div className="hidden xl:grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 uppercase px-1">
+                                <div className={conCosto ? 'col-span-6' : 'col-span-8'}>Producto</div>
+                                <div className="col-span-3">{form.tipo === 'ajuste' ? 'Cantidad contada' : 'Cantidad'}</div>
+                                {conCosto && <div className="col-span-2">Costo unit.</div>}
+                                <div className="col-span-1"></div>
                             </div>
 
                             {/* Líneas */}
-                            <div className="space-y-2">
-                                {form.items.map((item, index) => (
-                                    <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                                        <div className="col-span-7">
-                                            <select
-                                                value={item.producto_id}
-                                                onChange={e => handleItemChange(index, 'producto_id', e.target.value)}
-                                                className="w-full h-[42px] rounded-lg border border-gray-300 px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition bg-white"
-                                            >
-                                                <option value="">Selecciona...</option>
-                                                {productos.map(p => (
-                                                    <option key={p.producto_id} value={p.producto_id}>
-                                                        {p.producto}{p.sku ? ` (${p.sku})` : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="col-span-3">
-                                            <input
-                                                type="number"
-                                                step="0.0001"
-                                                min="0.0001"
-                                                value={item.cantidad}
-                                                onChange={e => handleItemChange(index, 'cantidad', e.target.value)}
-                                                placeholder="0.00"
-                                                className="w-full h-[42px] rounded-lg border border-gray-300 px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
-                                            />
-                                        </div>
-                                        <div className="col-span-2 flex justify-center">
-                                            {form.items.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => eliminarItem(index)}
-                                                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                            <div className="space-y-3">
+                                {form.items.map((item, index) => {
+                                    const producto = productoDe(item.producto_id);
+                                    return (
+                                        <div key={index} className="grid grid-cols-12 gap-2 items-start">
+                                            <div className={conCosto ? 'col-span-12 xl:col-span-6' : 'col-span-12 xl:col-span-8'}>
+                                                <select
+                                                    value={item.producto_id}
+                                                    onChange={e => handleItemChange(index, 'producto_id', e.target.value)}
+                                                    className="w-full h-[42px] rounded-lg border border-gray-300 px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition bg-white"
                                                 >
-                                                    ✕
-                                                </button>
+                                                    <option value="">Selecciona...</option>
+                                                    {productos.map(p => (
+                                                        <option key={p.producto_id} value={p.producto_id}>
+                                                            {p.producto}{p.sku ? ` (${p.sku})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {producto && (
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        Existencia: {cantidad(producto.stock_actual, producto.unidad)}
+                                                        {' · '}Costo promedio: {dinero(producto.costo_unitario, '$', 4)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="col-span-5 xl:col-span-3">
+                                                <MoneyInput
+                                                    value={item.cantidad}
+                                                    decimals={producto && !producto.permite_fraccion ? 0 : 4}
+                                                    suffix={producto?.unidad ?? undefined}
+                                                    placeholder="0"
+                                                    onChange={v => handleItemChange(index, 'cantidad', v)}
+                                                />
+                                            </div>
+                                            {conCosto && (
+                                                <div className="col-span-5 xl:col-span-2">
+                                                    <MoneyInput
+                                                        value={item.costo_unitario}
+                                                        decimals={4}
+                                                        prefix="$"
+                                                        placeholder="Opcional"
+                                                        onChange={v => handleItemChange(index, 'costo_unitario', v)}
+                                                    />
+                                                </div>
                                             )}
+                                            <div className="col-span-2 xl:col-span-1 flex justify-center">
+                                                {form.items.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => eliminarItem(index)}
+                                                        className="h-[42px] w-[42px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                                                        aria-label="Quitar línea"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             <p className="text-xs text-gray-400">
@@ -178,6 +207,7 @@ export default function InventarioNuevoRegistro() {
                 {/* Botones */}
                 <div className="mt-6 flex items-center justify-end gap-3">
                     <button
+                        type="button"
                         onClick={() => navigate('/admin/inventario/entradas')}
                         disabled={isSaving}
                         className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
@@ -185,6 +215,7 @@ export default function InventarioNuevoRegistro() {
                         Cancelar
                     </button>
                     <button
+                        type="button"
                         onClick={handleSubmit}
                         disabled={isSaving}
                         className={`px-4 py-2.5 text-sm font-medium text-white rounded-lg transition disabled:opacity-50 ${tipoColors[form.tipo]}`}

@@ -790,3 +790,35 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+/* Impresion de reportes y tickets desde el navegador (respaldo de la impresora termica) */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .area-impresion,
+  .area-impresion * {
+    visibility: visible;
+  }
+
+  .area-impresion {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 80mm;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 2mm 3mm !important;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+}

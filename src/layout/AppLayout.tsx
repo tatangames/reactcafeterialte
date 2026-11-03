@@ -19,7 +19,8 @@ const LayoutContent: React.FC = () => {
         } ${isMobileOpen ? "ml-0" : ""}`}
       >
         <AppHeader />
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+        {/* Sin margen ni ancho máximo: cada página trae su p-6 y el contenido usa todo el ancho, como en KOLO */}
+        <div className="w-full">
           <Outlet />
         </div>
       </div>

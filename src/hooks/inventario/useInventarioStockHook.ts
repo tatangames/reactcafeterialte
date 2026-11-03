@@ -1,23 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
-import { getInventarioStock } from '../../services/api';
+import { getCategoriasTable } from '../../services/api';
+import { actualizarStockMinimo, getStock } from '../../services/inventario';
 import { getToken } from '../../utils/auth';
-import { InventarioStockInterface } from '../../types/interfaces';
+import { mensajeError } from '../../utils/formato';
+import { CategoriasInterface, InventarioStockFiltros, InventarioStockInterface } from '../../types/interfaces';
 
 export function useInventarioStockHook() {
     const [data, setData] = useState<InventarioStockInterface[]>([]);
+    const [categorias, setCategorias] = useState<CategoriasInterface[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterText, setFilterText] = useState('');
+    const [filtros, setFiltros] = useState<InventarioStockFiltros>({ clase: '', categoria_id: '', estado: '' });
 
-    useEffect(() => { fetchStock(); }, []);
+    // Edición del stock mínimo
+    const [editando, setEditando] = useState<InventarioStockInterface | null>(null);
+    const [isSavingMinimo, setIsSavingMinimo] = useState(false);
+
+    useEffect(() => {
+        getCategoriasTable(getToken() ?? '')
+            .then((res: CategoriasInterface[]) => setCategorias(res.filter(c => c.estado)))
+            .catch(() => setCategorias([]));
+    }, []);
+
+    useEffect(() => { fetchStock(); }, [filtros]);
 
     const fetchStock = async () => {
+        setLoading(true);
         try {
-            const token = getToken();
-            if (!token) throw new Error('Token no encontrado');
-            const response = await getInventarioStock(token);
-            setData(response);
+            setData(await getStock(filtros));
         } catch (error) {
             console.error(error);
             toast.error('Error al cargar stock');
@@ -26,10 +38,51 @@ export function useInventarioStockHook() {
         }
     };
 
+    const setFiltro = (campo: keyof InventarioStockFiltros, valor: string) =>
+        setFiltros(prev => ({ ...prev, [campo]: valor }));
+
+    const guardarMinimo = async (valor: number) => {
+        if (!editando) return;
+        setIsSavingMinimo(true);
+        try {
+            const res = await actualizarStockMinimo(editando.producto_id, valor);
+            setData(prev => prev.map(p => p.producto_id === editando.producto_id
+                ? { ...p, stock_minimo: valor, bajo_minimo: res.bajo_minimo }
+                : p));
+            toast.success(res.message);
+            setEditando(null);
+        } catch (error) {
+            toast.error(mensajeError(error, 'Error al guardar el stock mínimo'));
+        } finally {
+            setIsSavingMinimo(false);
+        }
+    };
+
+    const texto = filterText.toLowerCase();
     const filteredData = data.filter(item =>
-        item.producto.toLowerCase().includes(filterText.toLowerCase()) ||
-        (item.sku ?? '').toLowerCase().includes(filterText.toLowerCase())
+        item.producto.toLowerCase().includes(texto) ||
+        (item.sku ?? '').toLowerCase().includes(texto) ||
+        (item.codigo_barras ?? '').toLowerCase().includes(texto)
     );
 
-    return { filteredData, loading, filterText, setFilterText };
+    const resumen = useMemo(() => ({
+        productos:  filteredData.length,
+        enAlerta:   filteredData.filter(p => p.bajo_minimo).length,
+        valorTotal: filteredData.reduce((suma, p) => suma + p.valor_inventario, 0),
+    }), [filteredData]);
+
+    return {
+        filteredData,
+        categorias,
+        loading,
+        filterText,
+        setFilterText,
+        filtros,
+        setFiltro,
+        resumen,
+        editando,
+        setEditando,
+        isSavingMinimo,
+        guardarMinimo,
+    };
 }

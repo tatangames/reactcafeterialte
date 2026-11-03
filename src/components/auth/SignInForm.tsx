@@ -14,6 +14,7 @@ function SignInForm() {
     passwordError,
     loading,
     showPassword,
+    aviso,
     setEmail,
     setPassword,
     setShowPassword,
@@ -35,6 +36,12 @@ function SignInForm() {
               Ingresa tu correo y contraseña
             </p>
           </div>
+
+          {aviso && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {aviso}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
 

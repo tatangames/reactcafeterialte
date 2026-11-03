@@ -1,6 +1,6 @@
 // USADO PARA INICIAR SESION, OBTENER TOKEN
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { getMe, loginApi } from "../../services/api.ts";
@@ -9,8 +9,9 @@ import { useAuth } from "../../context/AuthContext.tsx";
 import { setAuth } from "../../utils/auth.ts";
 
 export enum AuthStatus {
-    INVALID_EMAIL = "EMAIL_NOT_FOUND",
-    INVALID_PASSWORD = "INVALID_PASSWORD",
+    INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
+    USER_INACTIVE = "USER_INACTIVE",
+    TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS",
 }
 
 interface User {
@@ -59,6 +60,25 @@ export function useSignIn() {
         return true;
     };
 
+    // Aviso que deja el interceptor de la API al cerrar una sesión vencida.
+    // Se lee al montar y se borra en un efecto (el inicializador no debe tener efectos)
+    const [aviso] = useState<string | null>(() => sessionStorage.getItem("aviso_login"));
+    useEffect(() => {
+        sessionStorage.removeItem("aviso_login");
+    }, []);
+
+    const mostrarError = (data: LoginResponse) => {
+        const message = data.status === AuthStatus.TOO_MANY_REQUESTS
+            ? "Demasiados intentos. Espera un minuto e intenta de nuevo."
+            : data.message;
+
+        // El backend no indica si falló el correo o la contraseña
+        if (data.status === AuthStatus.INVALID_CREDENTIALS) {
+            setPasswordError(message);
+        }
+        toast.error(message);
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
@@ -87,32 +107,16 @@ export function useSignIn() {
                 // 3. Guardar usuario en el contexto
                 setUser(userData);
 
-                // 👇 Agrega esto
-                console.log("userData:", userData);
-                console.log("localStorage auth:", localStorage.getItem("auth"));
-
                 toast.success(`Bienvenido ${userData.nombre} 👋`);
 
                 navigate("/dashboard", { replace: true });
             } else {
                 // Manejar respuesta no exitosa
-                if (data.status === AuthStatus.INVALID_EMAIL) {
-                    setEmailError(data.message);
-                } else if (data.status === AuthStatus.INVALID_PASSWORD) {
-                    setPasswordError(data.message);
-                }
-                toast.error(data.message);
+                mostrarError(data);
             }
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
-                const data = error.response.data as LoginResponse;
-
-                if (data.status === AuthStatus.INVALID_EMAIL) {
-                    setEmailError(data.message);
-                } else if (data.status === AuthStatus.INVALID_PASSWORD) {
-                    setPasswordError(data.message);
-                }
-                toast.error(data.message);
+                mostrarError(error.response.data as LoginResponse);
             } else {
                 setPasswordError("Error al conectar con el servidor");
                 toast.error("Error de conexión");
@@ -130,6 +134,7 @@ export function useSignIn() {
         passwordError,
         loading,
         showPassword,
+        aviso,
 
         // setters
         setEmail,

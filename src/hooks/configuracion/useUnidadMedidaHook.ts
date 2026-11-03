@@ -7,7 +7,7 @@ import {
     actualizarUnidadMedida,
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
-import {UnidadMedidaInterface} from "../../types/interfaces.ts";
+import {UnidadMedidaFormInterface, UnidadMedidaInterface} from "../../types/interfaces.ts";
 
 
 
@@ -42,11 +42,16 @@ export function useUnidadMedida() {
         }
     };
 
-    const handleCreate = async (nombre: string) => {
+    const handleCreate = async (datos: UnidadMedidaFormInterface) => {
         setIsCreating(true);
         try {
             const token = getToken();
-            const response = await crearUnidadMedida(token!, { nombre });
+            const response = await crearUnidadMedida(token!, {
+                nombre: datos.nombre,
+                abreviatura: datos.abreviatura,
+                tipo: datos.tipo,
+                factor_base: datos.factor_base,
+            });
 
             toast.success(response.message || "Unidad de medida creada correctamente");
             setIsCreateModalOpen(false);
@@ -63,7 +68,7 @@ export function useUnidadMedida() {
         }
     };
 
-    const handleUpdate = async (id: number, datos: { nombre: string; estado: boolean }) => {
+    const handleUpdate = async (id: number, datos: UnidadMedidaFormInterface) => {
         setIsUpdating(true);
         try {
             const token = getToken();
@@ -91,7 +96,8 @@ export function useUnidadMedida() {
     };
 
     const filteredData = data.filter((item) =>
-        item.nombre.toLowerCase().includes(filterText.toLowerCase())
+        item.nombre.toLowerCase().includes(filterText.toLowerCase()) ||
+        (item.abreviatura ?? "").toLowerCase().includes(filterText.toLowerCase())
     );
 
     return {

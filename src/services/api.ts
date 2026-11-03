@@ -2,18 +2,51 @@
 
 import axios from "axios";
 import {ImpresoraFormInterface, InformacionAdministradorResponseInterface} from "../types/interfaces.ts";
+import { clearAuth, getToken } from "../utils/auth.ts";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 export const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage/archivos/";
 
 // Crear instancia de axios
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
 });
+
+// Agrega el token guardado si la llamada no trae uno (las funciones nuevas ya no lo reciben)
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Token vencido, revocado o usuario desactivado → limpiar sesión y volver al login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url = String(error.config?.url ?? "");
+
+    if (status === 401 && !url.includes("/login") && getToken()) {
+      const data = error.response?.data as { status?: string; message?: string } | undefined;
+      sessionStorage.setItem(
+        "aviso_login",
+        data?.status === "USER_INACTIVE" && data.message
+          ? data.message
+          : "Tu sesión expiró. Inicia sesión de nuevo."
+      );
+      clearAuth();
+      window.location.replace("/");
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 
 
@@ -326,7 +359,7 @@ export const getUnidadMedidaTable = async (token: string) => {
 // CREAR UNIDAD DE MEDIDA
 export const crearUnidadMedida = async (
     token: string,
-    payload: { nombre: string }
+    payload: { nombre: string; abreviatura?: string; tipo?: string; factor_base?: string | number }
 ) => {
     const { data } = await api.post(
         `/admin/unidadmedida/nuevo`,
@@ -349,6 +382,9 @@ export const actualizarUnidadMedida = async (
     payload: {
         nombre: string;
         estado: boolean;
+        abreviatura?: string;
+        tipo?: string;
+        factor_base?: string | number;
     }
 ) => {
     const { data } = await api.put(
@@ -542,127 +578,6 @@ export const testImpresora = async (token: string, id: number) => {
 };
 
 
-// ************************  SECCION - PROVEEDORES ***************************************************************************
-// ================================================================================================================================
-
-// LISTADO DE PROVEEDORES
-export const getProveedoresTable = async (token: string) => {
-    const { data } = await api.get(
-        `/admin/proveedores/tabla`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-            },
-        }
-    );
-
-    return data;
-};
-
-// CREAR PROVEEDOR
-export const crearProveedor = async (
-    token: string,
-    payload: { nombre: string; notas?: string }
-) => {
-    const { data } = await api.post(
-        `/admin/proveedores/nuevo`,
-        payload,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-            },
-        }
-    );
-
-    return data;
-};
-
-// ACTUALIZAR PROVEEDOR
-export const actualizarProveedor = async (
-    token: string,
-    id: number,
-    payload: {
-        nombre: string;
-        notas?: string;
-        activo: boolean;
-    }
-) => {
-    const { data } = await api.put(
-        `/admin/proveedores/actualizar/${id}`,
-        payload,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-            },
-        }
-    );
-
-    return data;
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ************************  SECCION - PRODUCTOS ***************************************************************************
 // ================================================================================================================================
 
@@ -763,7 +678,7 @@ export const registrarEntradaInventario = async (
         fecha: string;
         tipo: string;
         descripcion?: string;
-        items: { producto_id: number; cantidad: number }[];
+        items: { producto_id: number; cantidad: number; costo_unitario?: number }[];
     }
 ) => {
     const { data } = await api.post('/inventario/entradas/registrar', payload, {

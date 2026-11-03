@@ -11,6 +11,7 @@ interface Usuario {
   correo: string;
   rol: string;
   estado: boolean;
+  ultimo_acceso: string | null;
 }
 
 export default function Usuarios() {
@@ -67,6 +68,17 @@ export default function Usuarios() {
           >
           {row.estado ? "Activo" : "Inactivo"}
         </span>
+      ),
+    },
+    {
+      name: "Último acceso",
+      width: "170px",
+      sortable: true,
+      selector: (row: Usuario) => row.ultimo_acceso ?? "",
+      cell: (row: Usuario) => (
+          <span className="text-sm text-gray-600">
+            {row.ultimo_acceso ? row.ultimo_acceso.slice(0, 10).split("-").reverse().join("/") + " " + row.ultimo_acceso.slice(11) : "Nunca"}
+          </span>
       ),
     },
     {

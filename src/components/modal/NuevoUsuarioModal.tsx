@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EyeCloseIcon, EyeIcon } from "../../icons";
+import { getRolesTable } from "../../services/api";
+import { getToken } from "../../utils/auth";
+
+const formVacio = { nombre: "", email: "", password: "", rol: "" };
 
 interface Props {
   isOpen: boolean;
@@ -19,12 +23,16 @@ export default function NuevoUsuarioModal({
                                             onConfirm,
                                             isCreating,
                                           }: Props) {
-  const [form, setForm] = useState({
-    nombre: "",
-    email: "",
-    password: "",
-    rol: "",
-  });
+  const [form, setForm] = useState(formVacio);
+  const [roles, setRoles] = useState<{ [id: string]: string }>({});
+
+  // Roles reales (admin, cajero, encargado_inventario, ...)
+  useEffect(() => {
+    if (!isOpen) return;
+    getRolesTable(getToken() ?? "")
+      .then((res) => setRoles(res.roles ?? {}))
+      .catch(() => setRoles({}));
+  }, [isOpen]);
 
   const [errors, setErrors] = useState<{
     nombre?: string;
@@ -76,7 +84,7 @@ export default function NuevoUsuarioModal({
       await onConfirm(form);
 
       // ✅ Solo limpia si fue exitoso
-      setForm({ nombre: "", email: "", password: "", rol: "" });
+      setForm(formVacio);
       setErrors({});
     } catch (error) {
       // ❌ Si hay error, NO limpia el formulario
@@ -86,7 +94,7 @@ export default function NuevoUsuarioModal({
 
   const handleClose = () => {
     // Limpiar solo al cerrar manualmente
-    setForm({ nombre: "", email: "", password: "", rol: "" });
+    setForm(formVacio);
     setErrors({});
     onClose();
   };
@@ -186,13 +194,15 @@ export default function NuevoUsuarioModal({
               }`}
             >
               <option value="">Seleccionar rol</option>
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
+              {Object.values(roles).map((nombre) => (
+                <option key={nombre} value={nombre}>{nombre}</option>
+              ))}
             </select>
             {errors.rol && (
               <p className="text-xs text-red-500 mt-1">{errors.rol}</p>
             )}
           </div>
+
         </div>
 
         <div className="flex justify-end gap-2 mt-6">

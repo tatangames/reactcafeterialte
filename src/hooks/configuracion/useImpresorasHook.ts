@@ -5,28 +5,33 @@ import {
     crearImpresora,
     actualizarImpresora,
     eliminarImpresora,
-    getCategoriasTable,
 } from "../../services/api";
+import { getTrabajosImpresion, probarImpresora, reintentarTrabajo } from "../../services/impresion";
 import { getToken } from "../../utils/auth";
+import { mensajeError } from "../../utils/formato";
 import {
     ImpresoraInterface,
     ImpresoraFormInterface,
-    CategoriasInterface,
+    TrabajoImpresionInterface,
 } from "../../types/interfaces";
 
 const formVacio: ImpresoraFormInterface = {
     alias: "",
+    conexion: "red",
     ip_impresora: "",
-    ip_servidor: "",
+    puerto: "9100",
+    nombre_windows: "",
     tipo_impresion: "escpos",
+    ancho_caracteres: 48,
+    uso: "ticket",
+    predeterminada: false,
+    cortar_papel: true,
     cash_drawer: "ninguno",
     activo: true,
-    categorias: [],
 };
 
 export function useImpresoras() {
     const [data, setData]                           = useState<ImpresoraInterface[]>([]);
-    const [categorias, setCategorias]               = useState<CategoriasInterface[]>([]);
     const [loading, setLoading]                     = useState(true);
     const [isModalOpen, setIsModalOpen]             = useState(false);
     const [isEditing, setIsEditing]                 = useState(false);
@@ -34,20 +39,30 @@ export function useImpresoras() {
     const [isSaving, setIsSaving]                   = useState(false);
     const [form, setForm]                           = useState<ImpresoraFormInterface>(formVacio);
 
+    // Prueba de impresión: resultado por impresora
+    const [probando, setProbando]                   = useState<number | null>(null);
+    const [resultadoPrueba, setResultadoPrueba]     = useState<Record<number, { ok: boolean; mensaje: string }>>({});
+
+    // Trabajos que fallaron
+    const [trabajos, setTrabajos]                   = useState<TrabajoImpresionInterface[]>([]);
+    const [reintentando, setReintentando]           = useState<number | null>(null);
+
     useEffect(() => {
         fetchAll();
     }, []);
+
+    const fetchTrabajos = () =>
+        getTrabajosImpresion({ estado: "error" })
+            .then((res) => setTrabajos(res.trabajos))
+            .catch(() => setTrabajos([]));
 
     const fetchAll = async () => {
         setLoading(true);
         try {
             const token = getToken()!;
-            const [resImpresoras, resCategorias] = await Promise.all([
-                getImpresorasTable(token),
-                getCategoriasTable(token),
-            ]);
+            const resImpresoras = await getImpresorasTable(token);
             setData(resImpresoras.data);
-            setCategorias(resCategorias);
+            fetchTrabajos();
         } catch {
             toast.error("Error al cargar datos");
         } finally {
@@ -56,7 +71,8 @@ export function useImpresoras() {
     };
 
     const abrirModalNuevo = () => {
-        setForm(formVacio);
+        // La primera impresora queda como predeterminada
+        setForm({ ...formVacio, predeterminada: data.length === 0 });
         setIsEditing(false);
         setSelectedId(null);
         setIsModalOpen(true);
@@ -64,13 +80,18 @@ export function useImpresoras() {
 
     const abrirModalEditar = (impresora: ImpresoraInterface) => {
         setForm({
-            alias:          impresora.alias,
-            ip_impresora:   impresora.ip_impresora,
-            ip_servidor:    impresora.ip_servidor,
-            tipo_impresion: impresora.tipo_impresion,
-            cash_drawer:    impresora.cash_drawer,
-            activo:         impresora.activo,
-            categorias:     impresora.categorias.map((c) => c.id),
+            alias:            impresora.alias,
+            conexion:         impresora.conexion,
+            ip_impresora:     impresora.ip_impresora ?? "",
+            puerto:           String(impresora.puerto || 9100),
+            nombre_windows:   impresora.nombre_windows ?? "",
+            tipo_impresion:   impresora.tipo_impresion ?? "escpos",
+            ancho_caracteres: impresora.ancho_caracteres,
+            uso:              impresora.uso,
+            predeterminada:   impresora.predeterminada,
+            cortar_papel:     impresora.cortar_papel,
+            cash_drawer:      impresora.cash_drawer,
+            activo:           impresora.activo,
         });
         setIsEditing(true);
         setSelectedId(impresora.id);
@@ -83,47 +104,29 @@ export function useImpresoras() {
         setSelectedId(null);
     };
 
-    const toggleCategoria = (id: number) => {
-        setForm((prev) => ({
-            ...prev,
-            categorias: prev.categorias.includes(id)
-                ? prev.categorias.filter((c) => c !== id)
-                : [...prev.categorias, id],
-        }));
-    };
-
     const handleGuardar = async () => {
-        if (!form.alias.trim()) return toast.error("El alias es obligatorio");
-        if (!form.ip_impresora.trim()) return toast.error("La IP de la impresora es obligatoria");
-        if (!form.ip_servidor.trim()) return toast.error("La IP del servidor es obligatoria");
-        if (form.categorias.length === 0) return toast.error("Selecciona al menos una categoría");
+        if (!form.alias.trim()) return toast.error("Ponle un nombre a la impresora");
+        if (form.conexion === "red" && !form.ip_impresora.trim()) return toast.error("Indica la IP de la impresora");
+        if (form.conexion === "windows" && !form.nombre_windows.trim()) return toast.error("Indica el nombre de la impresora en Windows");
 
         setIsSaving(true);
         try {
             const token = getToken()!;
-            if (isEditing && selectedId) {
-                const res = await actualizarImpresora(token, selectedId, form);
-                toast.success(res.message || "Impresora actualizada");
-            } else {
-                const res = await crearImpresora(token, form);
-                toast.success(res.message || "Impresora registrada");
-            }
+            const payload = { ...form, alias: form.alias.trim(), ip_impresora: form.ip_impresora.trim(), nombre_windows: form.nombre_windows.trim() };
+            const res = isEditing && selectedId
+                ? await actualizarImpresora(token, selectedId, payload)
+                : await crearImpresora(token, payload);
+            toast.success(res.message || "Impresora guardada");
             cerrarModal();
             fetchAll();
-        } catch (error: any) {
-            if (error.response?.data?.errors) {
-                const first = Object.values(error.response.data.errors)[0];
-                toast.error((first as string[])[0]);
-            } else {
-                toast.error(error.response?.data?.message || "Error al guardar");
-            }
+        } catch (error) {
+            toast.error(mensajeError(error, "Error al guardar"));
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleEliminar = async (id: number) => {
-
         try {
             const res = await eliminarImpresora(getToken()!, id);
             toast.success(res.message || "Impresora eliminada");
@@ -133,20 +136,54 @@ export function useImpresoras() {
         }
     };
 
+    const handleProbar = async (id: number) => {
+        setProbando(id);
+        try {
+            const res = await probarImpresora(id);
+            setResultadoPrueba((r) => ({ ...r, [id]: { ok: true, mensaje: res.message } }));
+            toast.success("Prueba enviada a la impresora");
+        } catch (error) {
+            const mensaje = mensajeError(error, "No se pudo imprimir");
+            setResultadoPrueba((r) => ({ ...r, [id]: { ok: false, mensaje } }));
+            toast.error(mensaje);
+        } finally {
+            setProbando(null);
+            fetchTrabajos();
+        }
+    };
+
+    const handleReintentar = async (trabajo: TrabajoImpresionInterface, impresoraId?: number) => {
+        setReintentando(trabajo.id);
+        try {
+            const res = await reintentarTrabajo(trabajo.id, impresoraId);
+            if (res.impreso) toast.success("Impreso");
+            else toast.error(res.message);
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo reintentar"));
+        } finally {
+            setReintentando(null);
+            fetchTrabajos();
+        }
+    };
+
     return {
         data,
-        categorias,
         loading,
         isModalOpen,
         isEditing,
         isSaving,
         form,
         setForm,
-        toggleCategoria,
         abrirModalNuevo,
         abrirModalEditar,
         cerrarModal,
         handleGuardar,
         handleEliminar,
+        probando,
+        resultadoPrueba,
+        handleProbar,
+        trabajos,
+        reintentando,
+        handleReintentar,
     };
 }

@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useSidebar } from "../context/SidebarContext";
-import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
-import NotificationDropdown from "../components/header/NotificationDropdown";
-import UserDropdown from "../components/header/UserDropdown";
+import AlertasStockBell from "../components/header/AlertasStockBell";
+import EstadoTurnoBoton from "../components/header/EstadoTurnoBoton";
+import EstadoConexion from "../components/pos/EstadoConexion";
 
 const AppHeader: React.FC = () => {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
@@ -50,14 +50,11 @@ const AppHeader: React.FC = () => {
           </button>
 
 
-          {/* Botón turno */}
-          <div className="flex items-center">
-            <button
-                onClick={() => console.log("Botón tiempo presionado")}
-                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <img src="/images/logo/tiempo.svg" alt="Tiempo" className="w-6 h-6" />
-            </button>
+          {/* Alertas de stock y estado del turno de caja */}
+          <div className="flex items-center gap-1">
+            <EstadoConexion compacto />
+            <AlertasStockBell />
+            <EstadoTurnoBoton />
           </div>
 
         </div>

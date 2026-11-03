@@ -288,6 +288,7 @@ export default function EditarUsuarioModal({
               )}
             </div>
 
+
             {/* ESTADO */}
             <div className="pt-2">
               <label className="text-sm font-medium text-gray-700 mb-2 block">

@@ -9,6 +9,7 @@ export function useProductosCatalogoHook() {
     const [data, setData] = useState<ProductoInterface[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterText, setFilterText] = useState("");
+    const [claseFiltro, setClaseFiltro] = useState("");
 
     useEffect(() => {
         fetchProductos();
@@ -29,10 +30,13 @@ export function useProductosCatalogoHook() {
         }
     };
 
+    const texto = filterText.toLowerCase();
     const filteredData = data.filter(
         (item) =>
-            item.nombre.toLowerCase().includes(filterText.toLowerCase()) ||
-            (item.sku ?? "").toLowerCase().includes(filterText.toLowerCase())
+            (!claseFiltro || item.clase === claseFiltro) &&
+            (item.nombre.toLowerCase().includes(texto) ||
+                (item.sku ?? "").toLowerCase().includes(texto) ||
+                (item.codigo_barras ?? "").toLowerCase().includes(texto))
     );
 
     return {
@@ -40,5 +44,7 @@ export function useProductosCatalogoHook() {
         loading,
         filterText,
         setFilterText,
+        claseFiltro,
+        setClaseFiltro,
     };
 }

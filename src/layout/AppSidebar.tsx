@@ -11,31 +11,40 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import CustomIcon from "../components/sidebar/CustomIcon.tsx";
 
+// permissions: basta con tener uno; sin permissions el item es visible para todos
+type NavSubItem = { name: string; path: string; permissions?: string[] };
+
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string }[];
+  permissions?: string[];
+  subItems?: NavSubItem[];
 };
 
 const navItems: NavItem[] = [
   {
-    name: "Roles y Permisos",
+    name: "Usuarios y seguridad",
     icon:  <CustomIcon
         src="/images/sidebar/config-user.svg"
-        alt="Roles y Permisos"
+        alt="Usuarios y seguridad"
     />,
     subItems: [
       {
-        name: "Roles",
+        name: "Roles y permisos",
         path: "/admin/roles",
-
+        permissions: ["roles.gestionar"],
       },
       {
         name: "Usuarios",
         path: "/admin/usuarios",
-
-      }
+        permissions: ["usuarios.gestionar"],
+      },
+      {
+        name: "Auditoría",
+        path: "/admin/auditoria",
+        permissions: ["auditoria.ver"],
+      },
     ],
   },
 
@@ -43,6 +52,156 @@ const navItems: NavItem[] = [
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/dashboard",
+  },
+
+  {
+    name: "Ventas",
+    icon:  <CustomIcon
+        src="/images/sidebar/config-user.svg"
+        alt="Ventas"
+    />,
+    subItems: [
+      {
+        name: "Mesas (punto de venta)",
+        path: "/pos",
+        permissions: ["pos.vender"],
+      },
+      {
+        name: "Venta rápida",
+        path: "/pos/mostrador",
+        permissions: ["pos.vender"],
+      },
+      {
+        name: "Historial de ventas",
+        path: "/ventas",
+        permissions: ["pos.historial", "pos.vender"],
+      },
+    ],
+  },
+
+  {
+    name: "Clientes",
+    icon:  <CustomIcon
+        src="/images/sidebar/config-user.svg"
+        alt="Clientes"
+    />,
+    subItems: [
+      {
+        name: "Clientes",
+        path: "/clientes",
+        permissions: ["clientes.ver"],
+      },
+      {
+        name: "Cuentas por cobrar",
+        path: "/cuentas-cobrar",
+        permissions: ["cuentas_cobrar.gestionar"],
+      },
+      {
+        name: "Pedidos especiales",
+        path: "/pedidos-especiales",
+        permissions: ["pedidos.gestionar"],
+      },
+    ],
+  },
+
+  {
+    name: "Compras",
+    icon:  <CustomIcon
+        src="/images/sidebar/productos.svg"
+        alt="Compras"
+    />,
+    subItems: [
+      {
+        name: "Compras",
+        path: "/compras",
+        permissions: ["compras.ver", "compras.gestionar"],
+      },
+      {
+        name: "Órdenes de compra",
+        path: "/compras/ordenes",
+        permissions: ["compras.ver", "compras.gestionar"],
+      },
+      {
+        name: "Proveedores",
+        path: "/compras/proveedores",
+        permissions: ["proveedores.gestionar", "compras.ver", "compras.gestionar", "cuentas_pagar.gestionar"],
+      },
+      {
+        name: "Cuentas por pagar",
+        path: "/cuentas-pagar",
+        permissions: ["cuentas_pagar.gestionar"],
+      },
+    ],
+  },
+
+  {
+    name: "Producción",
+    icon:  <CustomIcon
+        src="/images/sidebar/productos.svg"
+        alt="Producción"
+    />,
+    subItems: [
+      {
+        name: "Producción del día",
+        path: "/produccion",
+        permissions: ["produccion.ver", "produccion.registrar"],
+      },
+      {
+        name: "Recetas",
+        path: "/produccion/recetas",
+        permissions: ["recetas.gestionar", "produccion.ver", "produccion.registrar"],
+      },
+      {
+        name: "Mermas y cierre del día",
+        path: "/mermas",
+        permissions: ["mermas.registrar", "produccion.ver"],
+      },
+      {
+        name: "Resumen de producción",
+        path: "/produccion/resumen",
+        permissions: ["produccion.ver", "produccion.registrar"],
+      },
+    ],
+  },
+
+  {
+    name: "Reportes",
+    icon:  <CustomIcon
+        src="/images/sidebar/productos.svg"
+        alt="Reportes"
+    />,
+    path: "/reportes",
+    permissions: ["reportes.ver"],
+  },
+
+  {
+    name: "Gastos",
+    icon:  <CustomIcon
+        src="/images/logo/tiempo.svg"
+        alt="Gastos"
+    />,
+    path: "/gastos",
+    permissions: ["gastos.ver", "gastos.registrar"],
+  },
+
+  {
+    name: "Caja",
+    icon:  <CustomIcon
+        src="/images/logo/tiempo.svg"
+        alt="Caja"
+    />,
+    subItems: [
+      {
+        name: "Turno actual",
+        path: "/caja",
+        permissions: ["caja.abrir", "caja.movimientos", "caja.arqueo", "caja.cerrar"],
+      },
+      {
+        name: "Historial de cierres",
+        path: "/caja/historial",
+        permissions: ["caja.historial"],
+      },
+    ],
   },
 
   {
@@ -55,12 +214,12 @@ const navItems: NavItem[] = [
       {
         name: "Catálogo de Productos",
         path: "/admin/productos/index",
-
+        permissions: ["productos.ver", "productos.gestionar"],
       },
       {
         name: "Inventarios",
         path: "/admin/inventario",
-
+        permissions: ["inventario.ver"],
       },
     ],
   },
@@ -79,19 +238,32 @@ const navItems: NavItem[] = [
       {
         name: "Unidad de Medida",
         path: "/admin/unidadmedida/index",
+        permissions: ["catalogos.gestionar"],
       },
       {
         name: "Categorias",
         path: "/admin/categorias/index",
+        permissions: ["catalogos.gestionar"],
       },
       {
         name: "Impresoras",
         path: "/admin/impresoras/index",
+        permissions: ["impresoras.gestionar"],
       },
       {
-        name: "Proveedores",
-        path: "/admin/proveedores/index",
-
+        name: "Mesas y cocina",
+        path: "/admin/mesas",
+        permissions: ["mesas.configurar"],
+      },
+      {
+        name: "Cajas y formas de pago",
+        path: "/admin/cajas/index",
+        permissions: ["configuracion.gestionar"],
+      },
+      {
+        name: "Datos del negocio",
+        path: "/admin/configuracion/negocio",
+        permissions: ["configuracion.gestionar"],
       },
     ],
   },
@@ -104,7 +276,14 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setUser, hasAnyPermission } = useAuth();
+
+  // Solo los items que el usuario puede abrir; un grupo sin hijos visibles se oculta
+  const puedeVer = (permissions?: string[]) => !permissions || hasAnyPermission(permissions);
+  const menuVisible = navItems
+      .filter((nav) => puedeVer(nav.permissions))
+      .map((nav) => nav.subItems ? { ...nav, subItems: nav.subItems.filter((sub) => puedeVer(sub.permissions)) } : nav)
+      .filter((nav) => !nav.subItems || nav.subItems.length > 0);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const [openSubmenu, setOpenSubmenu] = useState<{
@@ -121,7 +300,7 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     let submenuMatched = false;
-    navItems.forEach((nav, index) => {
+    menuVisible.forEach((nav, index) => {
       if (nav.subItems) {
         nav.subItems.forEach((subItem) => {
           if (isActive(subItem.path)) {
@@ -293,7 +472,7 @@ const AppSidebar: React.FC = () => {
                 <h2 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
                   {isExpanded || isHovered || isMobileOpen ? "Menú" : <HorizontaLDots className="size-6" />}
                 </h2>
-                {renderMenuItems(navItems)}
+                {renderMenuItems(menuVisible)}
               </div>
 
               {/* Cerrar sesión */}

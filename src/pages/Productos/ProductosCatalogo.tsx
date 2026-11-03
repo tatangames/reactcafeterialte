@@ -5,6 +5,8 @@ import LoadingModal from "../../components/Loading/LoadingModal";
 import { useProductosCatalogoHook } from "../../hooks/productos/useProductoCatalogoHook";
 import { ProductoInterface } from "../../types/interfaces";
 import { STORAGE_URL } from "../../services/api";
+import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
+import { CanAccess } from "../../components/auth/CanAccess";
 
 export default function ProductosCatalogo() {
     const navigate = useNavigate();
@@ -13,13 +15,9 @@ export default function ProductosCatalogo() {
         loading,
         filterText,
         setFilterText,
+        claseFiltro,
+        setClaseFiltro,
     } = useProductosCatalogoHook();
-
-    const tipoLabel: Record<ProductoInterface["tipo"], string> = {
-        bien: "Bien",
-        servicio: "Servicio",
-        bien_servicio: "Bien y Servicio",
-    };
 
     const columns = [
         {
@@ -54,21 +52,46 @@ export default function ProductosCatalogo() {
             wrap: true,
         },
         {
-            name: "Tipo",
-            width: "140px",
+            name: "Clase",
+            width: "150px",
             sortable: true,
+            selector: (row: ProductoInterface) => row.clase,
             cell: (row: ProductoInterface) => (
-                <span className="text-sm text-gray-700">{tipoLabel[row.tipo]}</span>
+                <div className="text-sm text-gray-700">
+                    {CLASES_PRODUCTO[row.clase]}
+                    {!row.se_vende && <div className="text-xs text-gray-400">No se vende</div>}
+                </div>
             ),
         },
         {
             name: "Costo",
+            width: "110px",
+            sortable: true,
+            right: true,
+            selector: (row: ProductoInterface) => Number(row.costo_unitario),
+            cell: (row: ProductoInterface) => (
+                <span className="text-sm text-gray-600">{dinero(row.costo_unitario, "$", Number(row.costo_unitario) < 1 ? 4 : 2)}</span>
+            ),
+        },
+        {
+            name: "Precio",
+            width: "100px",
+            sortable: true,
+            right: true,
+            selector: (row: ProductoInterface) => Number(row.precio_venta),
+            cell: (row: ProductoInterface) => (
+                <span className="text-sm font-medium text-gray-800">{row.se_vende ? dinero(row.precio_venta) : "—"}</span>
+            ),
+        },
+        {
+            name: "Existencia",
             width: "120px",
             sortable: true,
-            selector: (row: ProductoInterface) => row.costo_unitario,
+            right: true,
+            selector: (row: ProductoInterface) => row.stock_actual ?? -Infinity,
             cell: (row: ProductoInterface) => (
-                <span className="text-sm text-gray-800">
-                    ${Number(row.costo_unitario).toFixed(2)}
+                <span className={`text-sm ${row.stock_actual !== null && row.stock_actual < 0 ? "text-red-600 font-semibold" : "text-gray-800"}`}>
+                    {row.controla_stock ? cantidad(row.stock_actual, row.unidad_abrev) : "No lleva"}
                 </span>
             ),
         },
@@ -89,12 +112,14 @@ export default function ProductosCatalogo() {
             width: "120px",
             cell: (row: ProductoInterface) => (
                 <div className="flex justify-center">
-                    <button
-                        onClick={() => navigate(`/admin/productos/editar/${row.id}`)}
-                        className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
-                    >
-                        Editar
-                    </button>
+                    <CanAccess permission="productos.gestionar">
+                        <button
+                            onClick={() => navigate(`/admin/productos/editar/${row.id}`)}
+                            className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
+                        >
+                            Editar
+                        </button>
+                    </CanAccess>
                 </div>
             ),
         },
@@ -107,12 +132,14 @@ export default function ProductosCatalogo() {
             <div className="p-6">
                 <div className="mb-6">
                     <div className="mb-4 flex items-center gap-3">
-                        <button
-                            onClick={() => navigate("/admin/productos/registro")}
-                            className="px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
-                        >
-                            + Crear Producto
-                        </button>
+                        <CanAccess permission="productos.gestionar">
+                            <button
+                                onClick={() => navigate("/admin/productos/registro")}
+                                className="px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+                            >
+                                + Crear Producto
+                            </button>
+                        </CanAccess>
                         <div>
                             <h1 className="text-2xl font-semibold text-gray-800">Productos</h1>
                             <p className="text-sm text-gray-500">{filteredData.length} productos en total</p>
@@ -120,13 +147,23 @@ export default function ProductosCatalogo() {
                     </div>
                 </div>
 
-                <div className="flex justify-end mb-4">
+                <div className="flex flex-wrap justify-end gap-3 mb-4">
+                    <select
+                        value={claseFiltro}
+                        onChange={(e) => setClaseFiltro(e.target.value)}
+                        className="h-[42px] rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none"
+                    >
+                        <option value="">Todas las clases</option>
+                        {Object.entries(CLASES_PRODUCTO).map(([valor, texto]) => (
+                            <option key={valor} value={valor}>{texto}</option>
+                        ))}
+                    </select>
                     <input
                         type="text"
-                        placeholder="Buscar por nombre o SKU..."
+                        placeholder="Buscar por nombre, SKU o código..."
                         value={filterText}
                         onChange={(e) => setFilterText(e.target.value)}
-                        className="h-[42px] w-[300px] rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
+                        className="h-[42px] w-full sm:w-[300px] rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
                     />
                 </div>
 

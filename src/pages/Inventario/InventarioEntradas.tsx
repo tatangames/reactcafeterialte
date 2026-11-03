@@ -107,6 +107,9 @@ export default function InventarioEntradas() {
                             {selectedEntrada.usuario && (
                                 <p><span className="font-medium text-gray-700">Usuario:</span> {selectedEntrada.usuario}</p>
                             )}
+                            {selectedEntrada.turno && (
+                                <p><span className="font-medium text-gray-700">Turno:</span> {selectedEntrada.turno}</p>
+                            )}
                         </div>
 
                         <div className="border-t pt-4">
