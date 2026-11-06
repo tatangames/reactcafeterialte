@@ -32,6 +32,18 @@ export interface CuentaPagarInterface {
     dias_vencida: number;
     proveedor_id?: number;
     proveedor?: string | null;
+    notas_credito?: NotaCreditoInterface[];
+}
+
+export interface NotaCreditoInterface {
+    id: number;
+    numero: string;
+    fecha: string;
+    monto: number;
+    motivo: string;
+    documento: string | null;
+    usuario: string | null;
+    anulada: boolean;
 }
 
 export interface PagoProveedorInterface {

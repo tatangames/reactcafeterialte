@@ -11,6 +11,7 @@ import { dinero, mensajeError } from "../../utils/formato";
 import { ClienteInterface, PedidoEspecialInterface } from "../../types/clientes";
 import { MetodoPagoInterface } from "../../types/caja";
 import { ProductoPosInterface } from "../../types/pos";
+import { sinTildes } from "../../utils/texto";
 
 interface Linea { producto_id: number; nombre: string; precio: number; cantidad: number; fraccion: boolean; notas: string }
 
@@ -77,9 +78,9 @@ export default function PedidoEspecialModal({ isOpen, pedido, productos, metodos
     }, [isOpen, pedido]);
 
     const sugerencias = useMemo(() => {
-        const t = busqueda.trim().toLowerCase();
+        const t = sinTildes(busqueda.trim());
         if (!t) return [];
-        return productos.filter((p) => p.nombre.toLowerCase().includes(t)).slice(0, 8);
+        return productos.filter((p) => sinTildes(p.nombre).includes(t)).slice(0, 8);
     }, [busqueda, productos]);
 
     if (!isOpen) return null;

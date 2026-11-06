@@ -8,6 +8,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { logout } from "../services/api";
 import { clearAuth, getToken } from "../utils/auth";
 import { useAuth } from "../context/AuthContext";
+import { useCaja } from "../context/CajaContext";
 import toast from "react-hot-toast";
 import CustomIcon from "../components/sidebar/CustomIcon.tsx";
 
@@ -31,8 +32,17 @@ const navItems: NavItem[] = [
     />,
     subItems: [
       {
+        name: "Mi cuenta y PIN",
+        path: "/mi-cuenta",
+      },
+      {
         name: "Roles y permisos",
         path: "/admin/roles",
+        permissions: ["roles.gestionar"],
+      },
+      {
+        name: "Manuales por rol",
+        path: "/manuales/permisos",
         permissions: ["roles.gestionar"],
       },
       {
@@ -181,7 +191,7 @@ const navItems: NavItem[] = [
         alt="Gastos"
     />,
     path: "/gastos",
-    permissions: ["gastos.ver", "gastos.registrar"],
+    permissions: ["gastos.ver", "gastos.registrar", "gastos.categorias"],
   },
 
   {
@@ -217,6 +227,11 @@ const navItems: NavItem[] = [
         permissions: ["productos.ver", "productos.gestionar"],
       },
       {
+        name: "Ordenar POS",
+        path: "/admin/productos/orden-pos",
+        permissions: ["productos.gestionar"],
+      },
+      {
         name: "Inventarios",
         path: "/admin/inventario",
         permissions: ["inventario.ver"],
@@ -227,6 +242,16 @@ const navItems: NavItem[] = [
 
 
 
+
+  {
+    name: "Manuales",
+    icon:  <CustomIcon
+        src="/images/sidebar/productos.svg"
+        alt="Manuales"
+    />,
+    path: "/manuales",
+    permissions: ["manuales.ver"],
+  },
 
   {
     name: "Configuración",
@@ -276,7 +301,8 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { setUser, hasAnyPermission } = useAuth();
+  const { user, setUser, hasAnyPermission } = useAuth();
+  const { actual } = useCaja();
 
   // Solo los items que el usuario puede abrir; un grupo sin hijos visibles se oculta
   const puedeVer = (permissions?: string[]) => !permissions || hasAnyPermission(permissions);
@@ -333,6 +359,16 @@ const AppSidebar: React.FC = () => {
   }, [location.pathname]);
 
   const handleLogout = async () => {
+    // Su turno sigue abierto: si sale así, el siguiente tendrá que cerrarlo y contar su efectivo
+    if (actual?.turno && user && actual.turno.usuario_apertura_id === user.id) {
+      const salirIgual = window.confirm(
+        "Tu turno de caja sigue abierto.\n\nSi sales sin cerrarlo, quien entre después tendrá que cerrarlo y contar tu efectivo antes de poder vender.\n\nAceptar: salir sin cerrar · Cancelar: ir a cerrar el turno"
+      );
+      if (!salirIgual) {
+        navigate("/caja/cierre");
+        return;
+      }
+    }
     setLogoutLoading(true);
     try {
       const token = getToken();

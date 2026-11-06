@@ -65,6 +65,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loadUser();
     }, []);
 
+    // Si el administrador cambia los permisos del rol, se toman al volver a la ventana
+    // y cada minuto, sin tener que cerrar sesión
+    useEffect(() => {
+        if (!user) return;
+        const refrescar = () => { if (getAuth()) refreshUser(); };
+        const timer = setInterval(refrescar, 60 * 1000);
+        window.addEventListener('focus', refrescar);
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('focus', refrescar);
+        };
+    }, [user?.id]);
+
     const hasRole = (role: string): boolean => {
         return user?.roles?.includes(role) ?? false;
     };

@@ -7,6 +7,7 @@ import {
     crearNuevoPermiso,
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
+import { sinTildes } from "../../utils/texto";
 
 
 
@@ -100,7 +101,7 @@ export function usePermisos() {
     };
 
     const filteredData = data.filter((item) =>
-        item.name.toLowerCase().includes(filterText.toLowerCase())
+        sinTildes(item.name).includes(sinTildes(filterText))
     );
 
     return {

@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getMapa } from '../../services/mesas';
 import { dinero, mensajeError } from '../../utils/formato';
 import { TerminalMapaInterface, transcurrido } from '../../types/mesas';
+import { sinTildes } from '../../utils/texto';
 
 const fechaHora = (f: string) => {
     const [d, h] = f.split(' ');
@@ -31,7 +32,7 @@ function TarjetaTerminal({ t, ahora, onAbrir, onEditar }: {
                 <div className="min-w-0 flex-1 px-3 py-2">
                     <p className="truncate pr-8 font-semibold text-gray-900">{t.nombre}</p>
                     {t.tipo === 'caja' && <p className="text-sm text-gray-500">Venta rápida de mostrador</p>}
-                    {!o && t.tipo !== 'caja' && <p className="text-sm text-gray-400">{t.tipo === 'llevar' ? 'Para llevar' : `Libre · ${t.capacidad} personas`}</p>}
+                    {!o && t.tipo !== 'caja' && <p className="text-sm text-gray-400">{`Libre · ${t.capacidad} personas`}</p>}
                     {o && (
                         <>
                             <p className="truncate text-sm italic text-gray-500">{o.tickets.join(', ') || 'Sin cuentas abiertas'}</p>
@@ -55,7 +56,7 @@ function TarjetaTerminal({ t, ahora, onAbrir, onEditar }: {
     );
 }
 
-// Mapa del punto de venta: mesas, caja de mostrador y para llevar
+// Mapa del punto de venta: mesas y la caja de mostrador
 export default function MapaMesas() {
     const navigate = useNavigate();
     const { user, hasPermission } = useAuth();
@@ -80,14 +81,13 @@ export default function MapaMesas() {
 
     const visibles = (terminales ?? []).filter(t => {
         if (zona && t.zona !== zona) return false;
-        const q = buscar.trim().toLowerCase();
+        const q = sinTildes(buscar.trim());
         if (!q) return true;
-        return [t.nombre, t.zona, t.orden?.usuario, ...(t.orden?.tickets ?? [])].some(v => v?.toLowerCase().includes(q));
+        return [t.nombre, t.zona, t.orden?.usuario, ...(t.orden?.tickets ?? [])].some(v => (v ? sinTildes(v).includes(q) : false));
     });
 
     const mesas = (terminales ?? []).filter(t => t.tipo === 'mesa');
     const ocupadas = mesas.filter(t => t.orden).length;
-    const personas = mesas.reduce((s, t) => s + (t.orden?.comensales ?? 0), 0);
 
     const abrir = (t: TerminalMapaInterface) => navigate(t.tipo === 'caja' ? '/pos/mostrador' : `/pos/terminal/${t.id}`);
 
@@ -118,7 +118,7 @@ export default function MapaMesas() {
                 </div>
 
                 <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-pink-600">
-                    Mesas ocupadas {ocupadas}/{mesas.length}{personas > 0 ? ` · ${personas} persona(s)` : ''}
+                    Mesas ocupadas {ocupadas}/{mesas.length}
                 </p>
 
                 {!terminales && <p className="text-gray-500">Cargando...</p>}

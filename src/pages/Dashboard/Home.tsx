@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import FechaInput from "../../components/form/FechaInput";
 import { Link, useNavigate } from "react-router-dom";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
@@ -160,10 +161,10 @@ export default function Home() {
                 {verPanel && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:max-w-4xl">
                         <label className="text-sm text-gray-600">Desde
-                            <input type="date" value={rango.desde} max={rango.hasta || undefined} onChange={(e) => cambiarFecha({ desde: e.target.value })} className={`${campo} mt-1`} />
+                            <FechaInput value={rango.desde} max={rango.hasta || undefined} onChange={(v) => cambiarFecha({ desde: v })} className={`${campo} mt-1`} />
                         </label>
                         <label className="text-sm text-gray-600">Hasta
-                            <input type="date" value={rango.hasta} min={rango.desde || undefined} max={hoyLocal()} onChange={(e) => cambiarFecha({ hasta: e.target.value })} className={`${campo} mt-1`} />
+                            <FechaInput value={rango.hasta} min={rango.desde || undefined} max={hoyLocal()} onChange={(v) => cambiarFecha({ hasta: v })} className={`${campo} mt-1`} />
                         </label>
                         <label className="text-sm text-gray-600">o
                             <select value={periodo} onChange={(e) => elegirPeriodo(e.target.value as Periodo)} className={`${campo} mt-1`}>

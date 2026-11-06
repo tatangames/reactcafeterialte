@@ -1,4 +1,7 @@
 import DataTable from "react-data-table-component";
+import { Link } from "react-router-dom";
+
+import { useAuth } from "../../context/AuthContext";
 
 import LoadingModal from "../../components/Loading/LoadingModal";
 import NuevoUsuarioModal from "../../components/modal/NuevoUsuarioModal.tsx";
@@ -12,9 +15,11 @@ interface Usuario {
   rol: string;
   estado: boolean;
   ultimo_acceso: string | null;
+  pin_actualizado_at?: string | null;
 }
 
 export default function Usuarios() {
+  const { user } = useAuth();
   const {
     filteredData,
     loading,
@@ -30,6 +35,7 @@ export default function Usuarios() {
     handleEdit,
     handleCloseEditModal,
     handleUpdateUsuario,
+    handleResetearPin,
   } = useUsuarios();
 
   const columns = [
@@ -79,6 +85,29 @@ export default function Usuarios() {
           <span className="text-sm text-gray-600">
             {row.ultimo_acceso ? row.ultimo_acceso.slice(0, 10).split("-").reverse().join("/") + " " + row.ultimo_acceso.slice(11) : "Nunca"}
           </span>
+      ),
+    },
+    {
+      name: "PIN",
+      width: "150px",
+      sortable: true,
+      selector: (row: Usuario) => row.pin_actualizado_at ?? "",
+      cell: (row: Usuario) => (
+          <div className="flex flex-col">
+            <span className="text-sm text-gray-600" title="Fecha en que se estableció o cambió el PIN">
+              {row.pin_actualizado_at ? row.pin_actualizado_at.slice(0, 10).split("-").reverse().join("/") + " " + row.pin_actualizado_at.slice(11) : "Sin PIN"}
+            </span>
+            {/* Cada quien crea su propio PIN (con su contraseña), por eso solo sale en tu fila */}
+            {row.id === user?.id ? (
+                <Link to="/mi-cuenta" className="text-xs font-medium text-blue-600 hover:underline">
+                  {row.pin_actualizado_at ? "Cambiar mi PIN" : "Crear mi PIN"}
+                </Link>
+            ) : row.pin_actualizado_at && (
+                <button type="button" onClick={() => handleResetearPin(row)} className="text-left text-xs font-medium text-red-600 hover:underline">
+                  Borrar PIN (lo olvidó)
+                </button>
+            )}
+          </div>
       ),
     },
     {

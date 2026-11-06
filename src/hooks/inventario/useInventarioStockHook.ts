@@ -6,6 +6,7 @@ import { actualizarStockMinimo, getStock } from '../../services/inventario';
 import { getToken } from '../../utils/auth';
 import { mensajeError } from '../../utils/formato';
 import { CategoriasInterface, InventarioStockFiltros, InventarioStockInterface } from '../../types/interfaces';
+import { sinTildes } from '../../utils/texto';
 
 export function useInventarioStockHook() {
     const [data, setData] = useState<InventarioStockInterface[]>([]);
@@ -58,11 +59,11 @@ export function useInventarioStockHook() {
         }
     };
 
-    const texto = filterText.toLowerCase();
+    const texto = sinTildes(filterText);
     const filteredData = data.filter(item =>
-        item.producto.toLowerCase().includes(texto) ||
-        (item.sku ?? '').toLowerCase().includes(texto) ||
-        (item.codigo_barras ?? '').toLowerCase().includes(texto)
+        sinTildes(item.producto).includes(texto) ||
+        sinTildes(item.sku ?? '').includes(texto) ||
+        sinTildes(item.codigo_barras ?? '').includes(texto)
     );
 
     const resumen = useMemo(() => ({

@@ -355,6 +355,10 @@ export interface ConfiguracionNegocioInterface {
     id: number;
     nombre: string;
     razon_social: string | null;
+    nit: string | null;
+    nrc: string | null;
+    actividad_economica: string | null;
+    tipo_establecimiento: string | null;
     direccion: string | null;
     telefono: string | null;
     correo: string | null;
@@ -370,6 +374,10 @@ export interface ConfiguracionNegocioInterface {
 export interface ConfiguracionNegocioFormInterface {
     nombre: string;
     razon_social: string;
+    nit: string;
+    nrc: string;
+    actividad_economica: string;
+    tipo_establecimiento: string;
     direccion: string;
     telefono: string;
     correo: string;

@@ -1,11 +1,15 @@
 import { useEffect, useRef } from "react";
 import { useSidebar } from "../context/SidebarContext";
-import AlertasStockBell from "../components/header/AlertasStockBell";
+import NotificacionesBell from "../components/header/NotificacionesBell";
 import EstadoTurnoBoton from "../components/header/EstadoTurnoBoton";
 import EstadoConexion from "../components/pos/EstadoConexion";
+import { useAuth } from "../context/AuthContext";
+import { LockIcon } from "../icons";
+import { bloquearPantalla } from "../utils/bloqueo";
 
 const AppHeader: React.FC = () => {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { user } = useAuth();
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -50,11 +54,19 @@ const AppHeader: React.FC = () => {
           </button>
 
 
-          {/* Alertas de stock y estado del turno de caja */}
+          {/* Notificaciones y estado del turno de caja */}
           <div className="flex items-center gap-1">
             <EstadoConexion compacto />
-            <AlertasStockBell />
+            <NotificacionesBell />
             <EstadoTurnoBoton />
+            {/* Al ir al baño o dejar el equipo: nadie más puede usarlo sin tu PIN */}
+            {user && (
+                <button type="button" onClick={() => bloquearPantalla(user.id)} title="Bloquear pantalla"
+                    className="ml-1 flex h-10 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100">
+                  <LockIcon className="size-5" />
+                  <span className="hidden sm:inline">Bloquear</span>
+                </button>
+            )}
           </div>
 
         </div>

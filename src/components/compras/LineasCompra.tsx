@@ -4,6 +4,7 @@ import { inputClass } from "../form/FormField";
 import MoneyInput from "../form/MoneyInput";
 import { cantidad as formatoCantidad, dinero } from "../../utils/formato";
 import { ProductoCompraInterface, UnidadCompraInterface } from "../../types/compras";
+import { sinTildes } from "../../utils/texto";
 
 export interface LineaCompra {
     clave: string;
@@ -23,23 +24,61 @@ interface Props {
     bloquearProductos?: boolean;  // recepción de una orden: no se agregan productos nuevos
 }
 
+// Filtro del buscador: se recuerda el último que usaste
+const TIPOS = [
+    { valor: "todos", texto: "Todos" },
+    { valor: "materia_prima", texto: "Materia prima" },
+    { valor: "reventa", texto: "Reventa" },
+    { valor: "empaque", texto: "Empaque" },
+    { valor: "producto_terminado", texto: "Elaborados" },
+];
+const CLAVE_TIPO = "compras.tipoBusqueda";
+const leerTipo = () => {
+    try {
+        return localStorage.getItem(CLAVE_TIPO) ?? "todos";
+    } catch {
+        return "todos";
+    }
+};
+
 export const subtotalLinea = (l: LineaCompra) => Math.round(Number(l.cantidad || 0) * Number(l.costo_unitario || 0) * 100) / 100;
 
 // Productos de una orden o compra: unidad de compra con su conversión a la unidad del inventario
 export default function LineasCompra({ lineas, productos, unidades, onChange, bloquearProductos = false }: Props) {
     const [busqueda, setBusqueda] = useState("");
+    const [tipo, setTipo] = useState(leerTipo);
+    const [abierto, setAbierto] = useState(false);
 
+    const elegirTipo = (v: string) => {
+        setTipo(v);
+        try {
+            localStorage.setItem(CLAVE_TIPO, v);
+        } catch {
+            /* sin almacenamiento: solo no se recuerda */
+        }
+    };
+
+    const delTipo = useMemo(() => (tipo === "todos" ? productos : productos.filter((p) => p.clase === tipo)), [tipo, productos]);
+    const cuantos = (v: string) => (v === "todos" ? productos.length : productos.filter((p) => p.clase === v).length);
+
+    // Con un tipo elegido, al tocar el buscador ya aparece la lista de ese tipo sin escribir nada
     const sugerencias = useMemo(() => {
-        const t = busqueda.trim().toLowerCase();
-        if (!t) return [];
-        return productos.filter((p) => p.nombre.toLowerCase().includes(t) || p.sku?.toLowerCase() === t).slice(0, 8);
-    }, [busqueda, productos]);
+        const t = sinTildes(busqueda.trim());
+        if (!t) return tipo !== "todos" && abierto ? delTipo.slice(0, 30) : [];
+        return delTipo.filter((p) => sinTildes(p.nombre).includes(t) || p.sku?.toLowerCase() === t).slice(0, 8);
+    }, [busqueda, delTipo, tipo, abierto]);
+    const tipoActual = TIPOS.find((x) => x.valor === tipo);
 
+    const [recienAgregada, setRecienAgregada] = useState<string | null>(null);
+
+    // La cantidad empieza vacía (antes era 1 y se quedaba sin cambiar): el cursor salta ahí
     const agregar = (p: ProductoCompraInterface) => {
         if (!lineas.some((l) => l.producto_id === p.id)) {
+            const clave = `${p.id}-${Date.now()}`;
+            setRecienAgregada(clave);
             onChange([...lineas, {
-                clave: `${p.id}-${Date.now()}`, producto_id: p.id, unidad_medida_id: p.unidad_medida_id,
-                cantidad: "1", costo_unitario: p.costo_unitario ? String(p.costo_unitario) : "",
+                clave, producto_id: p.id, unidad_medida_id: p.unidad_medida_id,
+                cantidad: "", costo_unitario: p.costo_unitario ? String(p.costo_unitario) : "",
             }]);
         }
         setBusqueda("");
@@ -60,12 +99,25 @@ export default function LineasCompra({ lineas, productos, unidades, onChange, bl
     return (
         <div className="space-y-3">
             {!bloquearProductos && (
-                <div className="relative">
-                    <input className={inputClass} value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar producto o materia prima para agregar" />
+                <div className="relative space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                        {TIPOS.filter((x) => x.valor === "todos" || cuantos(x.valor) > 0).map((x) => (
+                            <button key={x.valor} type="button" onClick={() => elegirTipo(x.valor)}
+                                className={`rounded-full px-3 py-1 text-xs font-medium transition ${tipo === x.valor ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                                {x.texto} <span className="opacity-70">({cuantos(x.valor)})</span>
+                            </button>
+                        ))}
+                    </div>
+                    <input className={inputClass} value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                        onFocus={() => setAbierto(true)} onBlur={() => setAbierto(false)}
+                        placeholder={tipo === "todos" ? "Buscar producto o materia prima para agregar" : `Buscar en ${tipoActual?.texto.toLowerCase()} o elegir de la lista`} />
+                    {busqueda.trim() && sugerencias.length === 0 && (
+                        <p className="text-xs text-gray-500">No hay coincidencias en {tipoActual?.texto.toLowerCase()}.{tipo !== "todos" && <button type="button" onClick={() => elegirTipo("todos")} className="ml-1 text-blue-600 hover:underline">Buscar en todos</button>}</p>
+                    )}
                     {sugerencias.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                        <div className="absolute z-10 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                             {sugerencias.map((p) => (
-                                <button key={p.id} type="button" onClick={() => agregar(p)}
+                                <button key={p.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => agregar(p)}
                                     className="flex w-full justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50">
                                     <span>{p.nombre} <span className="text-xs text-gray-400">{p.unidad ?? ""}</span></span>
                                     <span className="text-gray-500">costo {dinero(p.costo_unitario, "$", p.costo_unitario < 1 ? 4 : 2)}</span>
@@ -119,7 +171,9 @@ export default function LineasCompra({ lineas, productos, unidades, onChange, bl
                                             </select>
                                         </td>
                                         <td className="px-3 py-2">
-                                            <MoneyInput decimals={producto?.permite_fraccion || (unidad && base && unidad.id !== base.id) ? 3 : 0} placeholder="0"
+                                            <MoneyInput decimals={producto?.permite_fraccion || (unidad && base && unidad.id !== base.id) ? 3 : 0} placeholder="¿Cuánto?"
+                                                autoFocus={l.clave === recienAgregada}
+                                                className={Number(l.cantidad || 0) > 0 ? "" : "!border-red-300 bg-red-50"}
                                                 value={l.cantidad} onChange={(v) => cambiar(l.clave, { cantidad: v })} />
                                         </td>
                                         <td className="px-3 py-2">

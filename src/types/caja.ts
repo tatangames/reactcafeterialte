@@ -43,6 +43,7 @@ export interface TurnoInterface {
     estado: "abierto" | "cerrado";
     abierto_at: string;
     cerrado_at: string | null;
+    usuario_apertura_id: number;
     usuario_apertura: string | null;
     usuario_cierre: string | null;
     fondo_inicial: number;
@@ -154,6 +155,8 @@ export interface TurnoDetalleInterface {
 export interface TurnoActualResponseInterface extends Partial<Omit<TurnoDetalleInterface, "turno">> {
     caja: { id: number; nombre: string; activo: boolean };
     turno: TurnoInterface | null;
+    // El turno abierto es de otra persona (se fue sin cerrarlo): solo se puede cerrar
+    turno_ajeno?: boolean;
     // Solo sin turno abierto: quién cerró el anterior y qué dejó por comprar
     turno_anterior?: { id: number; cerrado_at: string | null; cerro: string | null } | null;
     por_comprar?: PorComprarInterface[];

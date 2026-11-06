@@ -1,8 +1,9 @@
 // CODIGO
 
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import {ImpresoraFormInterface, InformacionAdministradorResponseInterface} from "../types/interfaces.ts";
 import { clearAuth, getToken } from "../utils/auth.ts";
+import { pedirAutorizacion } from "../utils/autorizacion.ts";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 export const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage/archivos/";
@@ -25,12 +26,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// La acción necesita autorización del administrador: se pide su PIN y se repite la misma petición
+const reintentarConAutorizacion = async (error: AxiosError<{ message?: string; invalido?: boolean }> & { config: InternalAxiosRequestConfig }) => {
+  const data = error.response?.data;
+  const codigo = await pedirAutorizacion({ mensaje: data?.message ?? "Esta acción necesita autorización", invalido: !!data?.invalido });
+  if (!codigo) return Promise.reject(error);
+
+  const config = error.config;
+  if (config.data instanceof FormData) {
+    config.data.set("autorizacion", codigo);
+  } else {
+    const cuerpo = typeof config.data === "string" && config.data ? JSON.parse(config.data) : (config.data ?? {});
+    config.data = { ...cuerpo, autorizacion: codigo };
+  }
+  return api.request(config);
+};
+
 // Token vencido, revocado o usuario desactivado → limpiar sesión y volver al login
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const url = String(error.config?.url ?? "");
+
+    if (status === 403 && error.response?.data?.status === "SIN_PERMISO" && error.config && error.config.method !== "get") {
+      return reintentarConAutorizacion(error);
+    }
 
     if (status === 401 && !url.includes("/login") && getToken()) {
       const data = error.response?.data as { status?: string; message?: string } | undefined;
@@ -125,6 +146,22 @@ export const confirmResetPassword = async (
     return data;
 };
 
+
+// Datos de la sesión actual (con el token guardado), incluido si ya tiene PIN y desde cuándo
+export const getMiCuenta = async () =>
+  (await api.get("/me")).data as { nombre: string; email: string; roles: string[]; tiene_pin: boolean; pin_actualizado_at: string | null };
+
+// Cada quien cambia su PIN de autorización (con su contraseña actual)
+export const cambiarMiPin = async (datos: { password_actual: string; pin: string; pin_confirmation: string }) =>
+  (await api.put("/me/pin", datos)).data as { success: number; message: string; pin_actualizado_at: string };
+
+// Quita el bloqueo de pantalla con el PIN propio (o la contraseña si aún no tiene PIN)
+export const desbloquearPantalla = async (codigo: string) =>
+  (await api.post("/me/desbloquear", { codigo })).data as { success: number };
+
+// El administrador borra el PIN de quien lo olvidó
+export const resetearPinUsuario = async (id: number) =>
+  (await api.delete(`/admin/usuarios/${id}/pin`)).data as { success: number; message: string };
 
 export const getMe = async (token: string) => {
   const { data } = await api.get("/me", {

@@ -28,6 +28,8 @@ export default function CajaCierre() {
     const [confirmando, setConfirmando] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [resultado, setResultado] = useState<TurnoDetalleInterface | null>(null);
+    // Cerró el turno que otro dejó abierto: sigue en su sesión para abrir el suyo
+    const [eraAjeno, setEraAjeno] = useState(false);
 
     // Cerrado el turno se cierra la sesión: el siguiente turno lo abre quien entre con su usuario (otro o el mismo)
     const cerrarSesion = async () => {
@@ -49,7 +51,9 @@ export default function CajaCierre() {
             <div className="p-6">
                 <PageHeader title="Turno cerrado" subtitle={`${resultado.turno.caja} · Turno #${resultado.turno.id}`} />
                 <div className="no-imprimir mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                    Imprime el cierre y termina con <strong>Cerrar sesión</strong>: el siguiente turno lo abre quien entre con su usuario.
+                    {eraAjeno
+                        ? <>Cerraste el turno de {resultado.turno.usuario_apertura}. Imprime el cierre y luego <strong>abre tu turno</strong> para empezar a vender.</>
+                        : <>Imprime el cierre y termina con <strong>Cerrar sesión</strong>: el siguiente turno lo abre quien entre con su usuario.</>}
                 </div>
                 <div className={`mb-6 rounded-xl p-5 text-center ${d === 0 ? 'bg-green-50 text-green-800' : d < 0 ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-800'}`}>
                     <p className="text-sm">{d === 0 ? 'La caja cuadra' : d < 0 ? 'Faltante' : 'Sobrante'}</p>
@@ -61,9 +65,15 @@ export default function CajaCierre() {
                         className="px-6 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
                         Imprimir cierre
                     </button>
-                    <button type="button" onClick={cerrarSesion} className="px-6 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
-                        Cerrar sesión
-                    </button>
+                    {eraAjeno ? (
+                        <button type="button" onClick={() => navigate('/caja')} className="px-6 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
+                            Abrir mi turno
+                        </button>
+                    ) : (
+                        <button type="button" onClick={cerrarSesion} className="px-6 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">
+                            Cerrar sesión
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -91,6 +101,7 @@ export default function CajaCierre() {
                 observaciones: observaciones.trim() || undefined,
             });
             toast.success(res.message);
+            setEraAjeno(!!actual?.turno_ajeno);
             setResultado(res);
             refrescar();
         } catch (error) {

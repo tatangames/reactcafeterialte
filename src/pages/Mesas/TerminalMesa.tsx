@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-import ClienteBuscador from '../../components/clientes/ClienteBuscador';
 import QtyStepper from '../../components/form/QtyStepper';
 import MotivoModal from '../../components/modal/MotivoModal';
 import ModificadoresModal from '../../components/mesas/ModificadoresModal';
+import CancelarItemModal from '../../components/mesas/CancelarItemModal';
+import IngredientesModal from '../../components/mesas/IngredientesModal';
+import DescuentoModal from '../../components/pos/DescuentoModal';
 import PrecuentaImprimible from '../../components/mesas/PrecuentaImprimible';
 import CobroModal from '../../components/pos/CobroModal';
 import EstadoConexion from '../../components/pos/EstadoConexion';
@@ -16,21 +18,22 @@ import { STORAGE_URL } from '../../services/api';
 import { getConfiguracionNegocio } from '../../services/configuracion';
 import { imprimirVentaServidor } from '../../services/impresion';
 import {
-    abrirTerminal, actualizarItem, actualizarOrden, agregarItems, cerrarOrden, cobrarOrden, crearTicket, dividirItem,
+    abrirTerminal, actualizarItem, agregarItems, anularComanda, cerrarOrden, cobrarOrden, crearTicket, dividirItem,
     eliminarTicket, entregarComanda, enviarComanda, entregarItems, getCatalogoMesas, getMapa, getTerminal, imprimirComanda, moverItems,
-    quitarItem, renombrarTicket, trasladarOrden,
+    quitarItem, renombrarTicket, ResultadoImpresion, trasladarOrden,
 } from '../../services/mesas';
+import { montoDescuento } from '../../utils/carrito';
 import { nuevoUuid } from '../../utils/cajaDispositivo';
 import { imprimirConRespaldo } from '../../utils/imprimir';
 import { imprimirComandasNavegador } from '../../utils/imprimirComandas';
 import { cantidad, dinero, mensajeError } from '../../utils/formato';
-import { ClienteInterface } from '../../types/clientes';
 import { ConfiguracionNegocioInterface } from '../../types/interfaces';
 import {
-    CatalogoMesasInterface, ESTADOS_COMANDA, ESTADOS_ITEM, ItemOrdenInterface, OrdenInterface, ProductoMesaInterface,
+    CatalogoMesasInterface, ComandaInterface, ESTADOS_COMANDA, ESTADOS_ITEM, ItemOrdenInterface, OrdenInterface, ProductoMesaInterface,
     TerminalMapaInterface, transcurrido,
 } from '../../types/mesas';
-import { PagoFormInterface, VentaInterface } from '../../types/pos';
+import { DescuentoInterface, PagoFormInterface, VentaInterface } from '../../types/pos';
+import { sinTildes } from '../../utils/texto';
 
 type Pestana = 'productos' | 'cuentas' | 'comandas';
 
@@ -62,15 +65,20 @@ export default function TerminalMesa() {
     const [ocupado, setOcupado] = useState(false);
 
     const [conExtras, setConExtras] = useState<ProductoMesaInterface | null>(null);
-    const [comensales, setComensales] = useState(2);
-    const [eligiendoCliente, setEligiendoCliente] = useState(false);
-    const [cliente, setCliente] = useState<ClienteInterface | null>(null);
     const [cobro, setCobro] = useState<{ total: number; ticket_id?: number; item_ids?: number[] } | null>(null);
     const [venta, setVenta] = useState<VentaInterface | null>(null);
     const [quitando, setQuitando] = useState<ItemOrdenInterface | null>(null);
+    const [ajustando, setAjustando] = useState<ItemOrdenInterface | null>(null);
+    // Producto sin enviar al que se le cambian los extras (era deslactosada, no entera)
+    const [editandoExtras, setEditandoExtras] = useState<ItemOrdenInterface | null>(null);
+    const [anulando, setAnulando] = useState<ComandaInterface | null>(null);
+    const [descuento, setDescuento] = useState<DescuentoInterface | null>(null);
+    const [pidiendoDescuento, setPidiendoDescuento] = useState(false);
     const [liberando, setLiberando] = useState(false);
     const [trasladando, setTrasladando] = useState<TerminalMapaInterface[] | null>(null);
     const [renombrando, setRenombrando] = useState<{ id: number; nombre: string } | null>(null);
+    // Cuenta abierta por error que se va a borrar (se confirma antes)
+    const [borrando, setBorrando] = useState<OrdenInterface['tickets'][number] | null>(null);
     const [precuenta, setPrecuenta] = useState<number | null>(null);
     const uuidCobro = useRef(nuevoUuid());
 
@@ -93,7 +101,7 @@ export default function TerminalMesa() {
     }, []);
 
     // Se refresca solo para ver lo que otro dispositivo agregó o cobró (mientras no hay una ventana abierta)
-    const hayVentana = !!(conExtras || cobro || venta || quitando || liberando || trasladando || renombrando || eligiendoCliente);
+    const hayVentana = !!(conExtras || editandoExtras || borrando || cobro || venta || quitando || liberando || trasladando || renombrando || ajustando || anulando || pidiendoDescuento);
     useEffect(() => {
         if (hayVentana) return;
         const datos = setInterval(cargar, 15000);
@@ -131,16 +139,16 @@ export default function TerminalMesa() {
 
     // ── Abrir ──────────────────────────────────────────────────
     const abrir = async () => {
-        const res = await ejecutar(() => abrirTerminal(terminalId, { comensales }), 'No se pudo abrir la mesa');
+        const res = await ejecutar(() => abrirTerminal(terminalId), 'No se pudo abrir la mesa');
         if (res) setTicketActivo(res.orden.tickets[0]?.id ?? null);
     };
 
     // ── Productos ─────────────────────────────────────────────
     const productosVisibles = useMemo(() => {
         if (!catalogo) return [];
-        const q = busqueda.trim().toLowerCase();
+        const q = sinTildes(busqueda.trim());
         return catalogo.productos.filter(p => q
-            ? p.nombre.toLowerCase().includes(q) || p.sku?.toLowerCase() === q || p.codigo_barras === q
+            ? sinTildes(p.nombre).includes(q) || p.sku?.toLowerCase() === q || p.codigo_barras === q
             : categoria === null || p.categorias.includes(categoria));
     }, [catalogo, busqueda, categoria]);
 
@@ -149,7 +157,7 @@ export default function TerminalMesa() {
         const res = await ejecutar(() => agregarItems(orden.id, [{
             producto_id: producto.id, cantidad: extras?.cantidad ?? 1, modificadores: extras?.modificadores ?? [], notas: extras?.notas || undefined,
         }], activo?.id), 'No se pudo agregar el producto');
-        if (res) toast.success(`${producto.nombre} agregado a ${activo?.nombre ?? 'la cuenta'}`, { duration: 1200 });
+        if (res) toast.success(`${producto.nombre} agregado a ${activo?.nombre ?? 'la cuenta'}`, { duration: 2000 });
     };
 
     const tocarProducto = (p: ProductoMesaInterface) => (p.grupos.length > 0 ? setConExtras(p) : agregar(p));
@@ -162,7 +170,7 @@ export default function TerminalMesa() {
         toast.success(res.message ?? 'Enviado');
         // Un ticket por área: si la térmica no está o falló, salen desde el navegador
         if (res.impresion.errores.length) toast.error(`No se imprimió: ${[...new Set(res.impresion.errores)].join(' · ')}. Sale por el navegador.`, { duration: 6000 });
-        if (res.impresion.sin_impresora || res.impresion.errores.length) imprimirComandasNavegador(res.comandas);
+        if (res.impresion.sin_impresora || res.impresion.errores.length) imprimirComandasNavegador(res.comandas, false, negocio?.nombre);
     };
 
     // ── Líneas ────────────────────────────────────────────────
@@ -174,18 +182,39 @@ export default function TerminalMesa() {
         }
     };
 
-    const confirmarQuitar = async (motivo: string) => {
+    // El aviso CANCELADO sale en la impresora del área; si falla, se avisa pero la cancelación queda
+    const avisarImpresion = (impresion: ResultadoImpresion) => {
+        if (impresion?.errores.length) toast.error(`No se imprimió el aviso a cocina: ${[...new Set(impresion.errores)].join(' · ')}. Avisa en persona.`, { duration: 6000 });
+    };
+
+    const confirmarQuitar = async (motivo: string, cuantos: number) => {
         if (!quitando) return;
         setOcupado(true);
         try {
-            const res = await quitarItem(quitando.id, motivo);
-            if (res) { setOrden(res.orden); setQuitando(null); toast.success('Producto cancelado'); }
+            const res = await quitarItem(quitando.id, motivo, cuantos < quitando.cantidad ? cuantos : undefined);
+            if (res) { setOrden(res.orden); setQuitando(null); toast.success(res.message ?? 'Producto cancelado'); avisarImpresion(res.impresion); }
         } catch (e) {
             toast.error(mensajeError(e, 'No se pudo cancelar el producto'));
         } finally {
             setOcupado(false);
         }
     };
+
+    const confirmarAnularComanda = async (motivo: string) => {
+        if (!anulando) return;
+        setOcupado(true);
+        try {
+            const res = await anularComanda(anulando.id, motivo);
+            setOrden(res.orden); setAnulando(null); toast.success(res.message ?? 'Comanda anulada'); avisarImpresion(res.impresion);
+        } catch (e) {
+            toast.error(mensajeError(e, 'No se pudo anular la comanda'));
+        } finally {
+            setOcupado(false);
+        }
+    };
+
+    const recetaDe = (productoId: number) => catalogo?.productos.find(p => p.id === productoId)?.receta ?? [];
+    const productoDe = (productoId: number) => catalogo?.productos.find(p => p.id === productoId) ?? null;
 
     const alternar = (idItem: number) => setSeleccion(s => s.includes(idItem) ? s.filter(x => x !== idItem) : [...s, idItem]);
 
@@ -201,6 +230,7 @@ export default function TerminalMesa() {
         uuidCobro.current = nuevoUuid();
         setCobro(destino);
     };
+    const totalConDescuento = (bruto: number) => Math.round((bruto - montoDescuento(bruto, descuento)) * 100) / 100;
 
     const cobrar = async (pagos: PagoFormInterface[]) => {
         if (!orden || !cobro || !cajaId) return;
@@ -208,10 +238,11 @@ export default function TerminalMesa() {
         try {
             const res = await cobrarOrden(orden.id, {
                 uuid: uuidCobro.current, caja_id: cajaId, ticket_id: cobro.ticket_id ?? null, item_ids: cobro.item_ids,
-                cliente_id: cliente?.id ?? orden.cliente?.id ?? null,
+                descuento_global: descuento,
                 pagos: pagos.map(p => ({ metodo_pago_id: p.metodo_pago_id, monto: p.monto, referencia: p.referencia })),
             });
             setCobro(null);
+            setDescuento(null);
             setSeleccion([]);
             setVenta(res.venta);
             setOrden(res.orden.estado === 'abierta' ? res.orden : null);
@@ -225,14 +256,7 @@ export default function TerminalMesa() {
         }
     };
 
-    // ── Cliente, liberar y trasladar ──────────────────────────
-    const elegirCliente = async (c: ClienteInterface) => {
-        if (!orden) return;
-        setEligiendoCliente(false);
-        setCliente(c);
-        await ejecutar(() => actualizarOrden(orden.id, { cliente_id: c.id }), 'No se pudo asignar el cliente');
-    };
-
+    // ── Liberar y trasladar ───────────────────────────────────
     const liberar = async (motivo?: string) => {
         if (!orden) return;
         setOcupado(true);
@@ -298,23 +322,12 @@ export default function TerminalMesa() {
                 )}
                 <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow">
                     <h1 className="text-2xl font-semibold text-gray-800">{terminal?.nombre}</h1>
-                    <p className="mt-1 text-sm text-gray-500">{terminal?.tipo === 'llevar' ? 'Sin órdenes para llevar en curso' : 'Mesa libre'}</p>
-                    {terminal?.tipo === 'mesa' && (
-                        <div className="mt-6">
-                            <p className="mb-2 text-sm font-medium text-gray-700">¿Cuántas personas?</p>
-                            <div className="grid grid-cols-4 gap-2">
-                                {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                                    <button key={n} type="button" onClick={() => setComensales(n)}
-                                        className={`h-12 rounded-xl text-lg font-semibold ${comensales === n ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>{n}</button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <p className="mt-1 text-sm text-gray-500">Mesa libre</p>
                     <div className="mt-6 grid grid-cols-2 gap-3">
                         <Link to="/pos" className="rounded-xl bg-gray-100 py-4 font-semibold text-gray-700 hover:bg-gray-200">Volver</Link>
                         <button type="button" onClick={abrir} disabled={ocupado || !enLinea}
                             className="rounded-xl bg-green-600 py-4 font-bold text-white hover:bg-green-700 disabled:opacity-50">
-                            {terminal?.tipo === 'llevar' ? 'Nueva orden' : 'Abrir mesa'}
+                            Abrir mesa
                         </button>
                     </div>
                     {!enLinea && <p className="mt-3 text-sm text-amber-700">Las mesas necesitan conexión con el servidor.</p>}
@@ -336,14 +349,11 @@ export default function TerminalMesa() {
                 <div className="min-w-0">
                     <p className="text-lg font-bold leading-tight text-gray-900">Terminal {orden.terminal.nombre}</p>
                     <p className="text-xs text-gray-500">
-                        {orden.numero} · {orden.comensales ? `${orden.comensales} persona(s) · ` : ''}<span className="font-mono">{transcurrido(orden.abierta_at, ahora)}</span> · {orden.usuario}
+                        {orden.numero} · <span className="font-mono">{transcurrido(orden.abierta_at, ahora)}</span> · {orden.usuario}
                     </p>
                 </div>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                     <EstadoConexion />
-                    <button type="button" onClick={() => setEligiendoCliente(true)} className="max-w-[220px] truncate rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
-                        👤 {orden.cliente?.nombre ?? 'Consumidor final'}
-                    </button>
                     {orden.terminal.tipo === 'mesa' && <button type="button" onClick={abrirTraslado} className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200">Cambiar de mesa</button>}
                     <button type="button" onClick={pedirLiberar} disabled={ocupado} className="rounded-xl bg-pink-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-pink-700">Limpiar terminal</button>
                 </div>
@@ -427,8 +437,9 @@ export default function TerminalMesa() {
                                 {orden.tickets.map(t => (
                                     <section key={t.id} className={`flex flex-col overflow-hidden rounded-xl border-2 bg-white ${t.estado === 'pagado' ? 'border-emerald-400 opacity-80' : t.id === activo?.id ? 'border-blue-600' : 'border-gray-200'}`}>
                                         <header className={`flex items-center justify-between px-4 py-3 text-white ${t.estado === 'pagado' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
-                                            <button type="button" onClick={() => t.estado === 'abierto' && setRenombrando({ id: t.id, nombre: t.nombre })} className="text-lg font-semibold">
-                                                {t.nombre}{t.estado === 'pagado' ? ' · pagado' : ''}
+                                            <button type="button" onClick={() => t.estado === 'abierto' && setRenombrando({ id: t.id, nombre: t.nombre })} className="text-lg font-semibold"
+                                                title={t.estado === 'abierto' ? 'Toca para cambiar el nombre' : undefined}>
+                                                {t.nombre}{t.estado === 'pagado' ? ' · pagado' : ' ✏️'}
                                             </button>
                                             {t.estado === 'abierto' && t.id !== activo?.id && (
                                                 <button type="button" onClick={() => setTicketActivo(t.id)} className="rounded-lg bg-white/20 px-3 py-1 text-xs font-semibold">Usar</button>
@@ -455,7 +466,7 @@ export default function TerminalMesa() {
                                             {t.estado === 'abierto' && (
                                                 <div className="grid grid-cols-3 gap-2">
                                                     <button type="button" onClick={() => imprimirPrecuenta(t.id)} className="rounded-lg bg-white py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200">Precuenta</button>
-                                                    <button type="button" disabled={ocupado || t.items.length > 0} onClick={() => ejecutar(() => eliminarTicket(t.id), 'No se pudo quitar la cuenta')}
+                                                    <button type="button" disabled={ocupado || abiertas.length <= 1} onClick={() => setBorrando(t)}
                                                         className="rounded-lg bg-white py-2 text-sm font-medium text-red-600 ring-1 ring-gray-200 disabled:opacity-40">Quitar</button>
                                                     <button type="button" disabled={ocupado || t.por_cobrar <= 0} onClick={() => abrirCobro({ total: t.por_cobrar, ticket_id: t.id })}
                                                         className="rounded-lg bg-green-600 py-2 text-sm font-bold text-white disabled:opacity-40">Cobrar {dinero(t.por_cobrar)}</button>
@@ -493,6 +504,7 @@ export default function TerminalMesa() {
                                                 <li key={i.id} className={`px-4 py-2 ${i.cancelado ? 'line-through opacity-50' : ''}`}>
                                                     <p className="text-gray-900">{cantidad(i.cantidad)}  {i.nombre}</p>
                                                     {i.modificadores.map(m => <p key={m} className="pl-4 text-xs text-gray-500">+ {m}</p>)}
+                                                    {(i.ajustes ?? []).map(t => <p key={t} className="pl-4 text-xs font-semibold text-red-700">! {t}</p>)}
                                                     {i.notas && <p className="pl-4 text-xs italic text-gray-500">{i.notas}</p>}
                                                 </li>
                                             ))}
@@ -500,6 +512,10 @@ export default function TerminalMesa() {
                                         <footer className="flex items-center justify-between gap-2 border-t border-gray-100 bg-gray-50 px-4 py-2">
                                             <span className="text-sm font-medium text-gray-600">{ESTADOS_COMANDA[c.estado]}</span>
                                             <div className="flex gap-2">
+                                                {c.estado !== 'cancelada' && (
+                                                    <button type="button" disabled={ocupado} onClick={() => setAnulando(c)}
+                                                        className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-gray-200">Anular</button>
+                                                )}
                                                 {['pendiente', 'en_preparacion', 'terminada'].includes(c.estado) && (
                                                     <button type="button" disabled={ocupado} onClick={async () => {
                                                         try { await entregarComanda(c.id); await cargar(); } catch (e) { toast.error(mensajeError(e, 'No se pudo marcar')); }
@@ -508,7 +524,7 @@ export default function TerminalMesa() {
                                                 <button type="button" onClick={async () => {
                                                     try {
                                                         const r = await imprimirComanda(c.id);
-                                                        if (r.impreso) toast.success(r.message); else imprimirComandasNavegador([r.comanda], true);
+                                                        if (r.impreso) toast.success(r.message); else imprimirComandasNavegador([r.comanda], true, negocio?.nombre);
                                                     } catch (e) { toast.error(mensajeError(e, 'No se pudo imprimir')); }
                                                 }} className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-gray-200" aria-label="Imprimir comanda">🖨</button>
                                             </div>
@@ -533,6 +549,16 @@ export default function TerminalMesa() {
                             const r = await ejecutar(() => crearTicket(orden.id), 'No se pudo crear la cuenta');
                             if (r) setTicketActivo(r.ticket_id);
                         }} className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-bold text-blue-700" aria-label="Añadir cuenta">+</button>
+                        {activo && (
+                            <button type="button" onClick={() => setRenombrando({ id: activo.id, nombre: activo.nombre })}
+                                className="ml-auto whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                                title={`Cambiar el nombre de ${activo.nombre}`}>✏️ Nombre</button>
+                        )}
+                        {activo && abiertas.length > 1 && (
+                            <button type="button" onClick={() => setBorrando(activo)}
+                                className="whitespace-nowrap rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                                title={`Borrar ${activo.nombre} (abierta por error)`}>🗑 Borrar</button>
+                        )}
                     </div>
 
                     <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto">
@@ -547,7 +573,9 @@ export default function TerminalMesa() {
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium leading-tight text-gray-800">{i.nombre}</p>
                                         {i.modificadores.length > 0 && <p className="text-xs text-gray-500">{i.modificadores.map(m => `+ ${m.opcion}`).join(' · ')}</p>}
+                                        {(i.texto_ajustes ?? []).length > 0 && <p className="text-xs font-semibold text-red-700">{i.texto_ajustes.map(t => `! ${t}`).join(' · ')}</p>}
                                         {i.notas && <p className="text-xs italic text-gray-500">{i.notas}</p>}
+                                        {i.estado === 'cancelado' && i.motivo_cancelacion && <p className="text-xs text-red-600">Cancelado: {i.motivo_cancelacion}</p>}
                                         <div className="mt-1 flex items-center gap-2"><ChipEstado item={i} /><span className="text-xs text-gray-400">{i.hora}</span></div>
                                     </div>
                                     <p className="whitespace-nowrap font-semibold">{dinero(i.subtotal)}</p>
@@ -557,6 +585,14 @@ export default function TerminalMesa() {
                                         {i.estado === 'pendiente'
                                             ? <QtyStepper value={i.cantidad} min={1} onChange={v => ejecutar(() => actualizarItem(i.id, { cantidad: v }), 'No se pudo cambiar la cantidad')} ariaLabel={`Cantidad de ${i.nombre}`} />
                                             : <span className="text-sm text-gray-600">{cantidad(i.cantidad)} × {dinero(i.precio_unitario)}</span>}
+                                        {i.estado === 'pendiente' && (productoDe(i.producto_id)?.grupos.length ?? 0) > 0 && (
+                                            <button type="button" onClick={() => setEditandoExtras(i)}
+                                                className="h-10 rounded-lg bg-gray-100 px-3 text-sm font-medium text-gray-700 hover:bg-gray-200">Cambiar extras</button>
+                                        )}
+                                        {i.estado === 'pendiente' && recetaDe(i.producto_id).length > 0 && (
+                                            <button type="button" onClick={() => setAjustando(i)}
+                                                className="h-10 rounded-lg bg-gray-100 px-3 text-sm font-medium text-gray-700 hover:bg-gray-200">Ingredientes</button>
+                                        )}
                                         <button type="button" onClick={() => quitar(i)} className="ml-auto h-10 w-10 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label={`Quitar ${i.nombre}`}>✕</button>
                                     </div>
                                 )}
@@ -580,6 +616,12 @@ export default function TerminalMesa() {
                             <span className="text-gray-600">{seleccion.length ? 'Seleccionado' : `Por cobrar ${activo ? `(${activo.nombre})` : ''}`}</span>
                             <span className="text-3xl font-bold">{dinero(seleccion.length ? totalSeleccion : activo?.por_cobrar ?? 0)}</span>
                         </div>
+                        {descuento && (
+                            <p className="text-right text-sm font-medium text-green-700">
+                                Descuento {descuento.tipo === 'porcentaje' ? `${descuento.valor}%` : dinero(descuento.valor)} en el próximo cobro
+                                <button type="button" onClick={() => setDescuento(null)} className="ml-2 text-red-600 hover:underline">quitar</button>
+                            </p>
+                        )}
                         <p className="text-right text-xs text-gray-500">Mesa completa: {dinero(orden.totales.total)} · cobrado {dinero(orden.totales.cobrado)}</p>
                         <div className="grid grid-cols-2 gap-2">
                             {orden.totales.por_enviar > 0 && (
@@ -594,9 +636,19 @@ export default function TerminalMesa() {
                                 </button>
                             )}
                             {activo && <button type="button" onClick={() => imprimirPrecuenta(activo.id)} className="rounded-xl bg-gray-100 py-4 font-semibold text-gray-700 hover:bg-gray-200">Precuenta</button>}
+                            <button type="button" onClick={() => setPidiendoDescuento(true)} disabled={ocupado}
+                                className={`rounded-xl py-4 font-semibold ${descuento ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${activo ? '' : 'col-span-2'}`}>
+                                {descuento ? 'Descuento ✓' : 'Descuento'}
+                            </button>
+                            {abiertas.filter(t => t.por_cobrar > 0).length > 1 && (
+                                <button type="button" disabled={ocupado} onClick={() => { setSeleccion([]); abrirCobro({ total: orden.totales.por_cobrar }); }}
+                                    className="col-span-2 rounded-xl bg-green-600 py-3 font-bold text-white hover:bg-green-700 disabled:opacity-40">
+                                    Cobrar toda la mesa ({abiertas.filter(t => t.por_cobrar > 0).length} cuentas) · {dinero(orden.totales.por_cobrar)}
+                                </button>
+                            )}
                             <button type="button" disabled={ocupado || (seleccion.length ? totalSeleccion : activo?.por_cobrar ?? 0) <= 0}
                                 onClick={() => seleccion.length ? abrirCobro({ total: totalSeleccion, item_ids: seleccion }) : activo && abrirCobro({ total: activo.por_cobrar, ticket_id: activo.id })}
-                                className={`rounded-xl bg-blue-600 py-4 text-lg font-bold text-white hover:bg-blue-700 disabled:opacity-40 ${activo ? '' : 'col-span-2'}`}>
+                                className="col-span-2 rounded-xl bg-blue-600 py-4 text-lg font-bold text-white hover:bg-blue-700 disabled:opacity-40">
                                 Cobrar
                             </button>
                         </div>
@@ -607,14 +659,37 @@ export default function TerminalMesa() {
             {/* Ventanas */}
             <ModificadoresModal producto={conExtras} grupos={catalogo?.grupos ?? []} onCancel={() => setConExtras(null)}
                 onConfirm={d => { const p = conExtras; setConExtras(null); if (p) agregar(p, d); }} />
+            <ModificadoresModal producto={editandoExtras ? productoDe(editandoExtras.producto_id) : null} grupos={catalogo?.grupos ?? []}
+                inicial={editandoExtras ? { modificadores: editandoExtras.modificadores.map(m => m.id), cantidad: editandoExtras.cantidad, notas: editandoExtras.notas ?? '' } : null}
+                onCancel={() => setEditandoExtras(null)}
+                onConfirm={async d => {
+                    if (!editandoExtras) return;
+                    const r = await ejecutar(() => actualizarItem(editandoExtras.id, { modificadores: d.modificadores, cantidad: d.cantidad, notas: d.notas || null }), 'No se pudieron cambiar los extras');
+                    if (r) { setEditandoExtras(null); toast.success('Extras actualizados'); }
+                }} />
 
-            <CobroModal isOpen={!!cobro} total={cobro?.total ?? 0} metodos={catalogos?.metodos_pago ?? []} isLoading={ocupado}
-                cliente={cliente && cliente.id === orden.cliente?.id ? cliente : null} enLinea={enLinea}
+            <CobroModal isOpen={!!cobro} total={totalConDescuento(cobro?.total ?? 0)} metodos={catalogos?.metodos_pago ?? []} isLoading={ocupado}
+                enLinea={enLinea}
                 onCancel={() => setCobro(null)} onConfirm={cobrar} />
 
-            <MotivoModal isOpen={!!quitando} titulo={`Cancelar ${quitando?.descripcion ?? ''}`}
-                descripcion="Ya se envió a preparar: queda cancelado en la comanda y en la auditoría. Requiere autorización."
-                textoConfirmar="Cancelar producto" isLoading={ocupado} onClose={() => setQuitando(null)} onConfirm={confirmarQuitar} />
+            <CancelarItemModal item={quitando} isLoading={ocupado} onClose={() => setQuitando(null)} onConfirm={confirmarQuitar} />
+
+            <MotivoModal isOpen={!!anulando} titulo={`Anular comanda #${anulando?.numero ?? ''} (${anulando?.area ?? 'General'})`}
+                descripcion="Se cancela todo lo que tenga sin cobrar, sale un aviso CANCELADO en su área y queda en la auditoría. Pide autorización del administrador."
+                textoConfirmar="Anular comanda" isLoading={ocupado} onClose={() => setAnulando(null)} onConfirm={confirmarAnularComanda} />
+
+            <IngredientesModal titulo={ajustando?.nombre ?? null} receta={ajustando ? recetaDe(ajustando.producto_id) : []} actuales={ajustando?.ajustes ?? []}
+                isLoading={ocupado} onCancel={() => setAjustando(null)}
+                onConfirm={async (ajustes) => {
+                    if (!ajustando) return;
+                    const r = await ejecutar(() => actualizarItem(ajustando.id, { ajustes }), 'No se pudo guardar');
+                    if (r) setAjustando(null);
+                }} />
+
+            <DescuentoModal isOpen={pidiendoDescuento} titulo="Descuento del cobro"
+                importe={seleccion.length ? totalSeleccion : activo?.por_cobrar ?? orden.totales.por_cobrar}
+                actual={descuento} maximoSinAutorizacion={Number(negocio?.descuento_max_sin_autorizacion ?? 10)}
+                onCancel={() => setPidiendoDescuento(false)} onConfirm={d => { setDescuento(d); setPidiendoDescuento(false); }} />
 
             <MotivoModal isOpen={liberando} titulo={`Limpiar ${orden.terminal.nombre}`}
                 descripcion={`Quedan ${dinero(orden.totales.por_cobrar)} sin cobrar. Se cancelarán y quedará en auditoría. Requiere autorización.`}
@@ -637,17 +712,35 @@ export default function TerminalMesa() {
                 </div>
             )}
 
-            {eligiendoCliente && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold">Cliente de la mesa</h2>
-                            <button type="button" onClick={() => setEligiendoCliente(false)} className="h-10 w-10 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Cerrar">✕</button>
+            {borrando && (() => {
+                const vivos = borrando.items.filter(i => i.estado !== 'cancelado');
+                const enviados = vivos.filter(i => i.estado !== 'pendiente');
+                return (
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+                            <h2 className="text-lg font-semibold">¿Borrar {borrando.nombre}?</h2>
+                            {enviados.length > 0 ? (
+                                <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                                    Tiene {enviados.length} producto(s) ya enviados a cocina. Cancélalos (con motivo) o muévelos a otra cuenta antes de borrarla.
+                                </p>
+                            ) : vivos.length > 0 ? (
+                                <p className="text-sm text-gray-600">
+                                    También se quitan {vivos.length} producto(s) sin enviar: {vivos.map(i => i.descripcion).join(', ')}. No salió comanda ni se descontó inventario.
+                                </p>
+                            ) : (
+                                <p className="text-sm text-gray-600">La cuenta está vacía.</p>
+                            )}
+                            <div className="flex gap-2">
+                                <button type="button" onClick={() => setBorrando(null)} className="flex-1 rounded-xl bg-gray-100 py-3 text-sm">Cancelar</button>
+                                <button type="button" disabled={ocupado || enviados.length > 0} onClick={async () => {
+                                    const r = await ejecutar(() => eliminarTicket(borrando.id), 'No se pudo borrar la cuenta');
+                                    if (r) { setBorrando(null); toast.success(r.message ?? 'Cuenta borrada'); }
+                                }} className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white disabled:opacity-50">Borrar cuenta</button>
+                            </div>
                         </div>
-                        <ClienteBuscador autoFocus onSelect={elegirCliente} />
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {trasladando && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">

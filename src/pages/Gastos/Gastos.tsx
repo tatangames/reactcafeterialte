@@ -28,8 +28,10 @@ export default function Gastos() {
     const { actual, refrescar } = useCaja();
     const puedeRegistrar = hasPermission('gastos.registrar');
     const puedeVer = hasPermission('gastos.ver');
+    const puedeCategorias = hasPermission('gastos.categorias');
 
-    const [vista, setVista] = useState<Vista>('gastos');
+    // Quien solo administra categorías entra directo a esa pestaña
+    const [vista, setVista] = useState<Vista>(puedeVer || puedeRegistrar ? 'gastos' : 'categorias');
     const [categorias, setCategorias] = useState<CategoriaGastoInterface[]>([]);
     const [rango, setRango] = useState({ desde: inicioMes(), hasta: hoyLocal() });
     const [categoriaId, setCategoriaId] = useState('');
@@ -109,7 +111,7 @@ export default function Gastos() {
         }
     };
 
-    const pestanas: [Vista, string, boolean][] = [['gastos', 'Gastos', true], ['resumen', 'Resumen', puedeVer], ['categorias', 'Categorías', puedeVer]];
+    const pestanas: [Vista, string, boolean][] = [['gastos', 'Gastos', puedeVer || puedeRegistrar], ['resumen', 'Resumen', puedeVer], ['categorias', 'Categorías', puedeCategorias]];
     const textoMes = (m: string) => `${MESES[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
 
     return (

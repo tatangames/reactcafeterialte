@@ -1,4 +1,5 @@
 import { haceDias, hoyLocal } from "../../utils/formato";
+import FechaInput from "../form/FechaInput";
 
 interface Props {
     desde: string;
@@ -22,11 +23,11 @@ export default function DateRangeFilter({ desde, hasta, onChange }: Props) {
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            <input type="date" value={desde} max={hasta || undefined} aria-label="Desde"
-                onChange={(e) => onChange({ desde: e.target.value, hasta })} className={inputClass} />
+            <FechaInput value={desde} max={hasta || undefined} aria-label="Desde"
+                onChange={(v) => onChange({ desde: v, hasta })} className={inputClass} />
             <span className="text-sm text-gray-400">a</span>
-            <input type="date" value={hasta} min={desde || undefined} max={hoyLocal()} aria-label="Hasta"
-                onChange={(e) => onChange({ desde, hasta: e.target.value })} className={inputClass} />
+            <FechaInput value={hasta} min={desde || undefined} max={hoyLocal()} aria-label="Hasta"
+                onChange={(v) => onChange({ desde, hasta: v })} className={inputClass} />
             <div className="flex gap-1">
                 {atajos.map((a) => {
                     const activo = a.desde === desde && a.hasta === hasta;

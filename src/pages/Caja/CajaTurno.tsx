@@ -195,8 +195,17 @@ export default function CajaTurno() {
                 actions={<>{cambiarCaja}<StatusBadge tone="success">Abierto</StatusBadge></>}
             />
 
+            {actual?.turno_ajeno && (
+                <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                    <p className="font-semibold">Este turno es de {turno.usuario_apertura} y quedó abierto</p>
+                    <p>Cuenta el efectivo y ciérralo (el cierre queda a tu nombre con la diferencia que salga); después abre tu turno.
+                        Mientras tanto no se puede vender ni registrar ingresos, egresos o gastos en él.</p>
+                </div>
+            )}
+
             {/* Acciones */}
             <div className="mb-6 flex flex-wrap gap-3">
+                {!actual?.turno_ajeno && <>
                 <CanAccess permission="caja.movimientos">
                     <button type="button" onClick={() => setModalMovimiento('ingreso')} className={`${botonGrande} bg-green-600 hover:bg-green-700`}>+ Ingreso</button>
                     <button type="button" onClick={() => setModalMovimiento('egreso')} className={`${botonGrande} bg-red-600 hover:bg-red-700`}>− Egreso</button>
@@ -210,6 +219,7 @@ export default function CajaTurno() {
                 <CanAccess permission="caja.movimientos">
                     <button type="button" onClick={() => setAbriendoCajon(true)} className={`${botonGrande} bg-amber-500 hover:bg-amber-600`}>Abrir cajón</button>
                 </CanAccess>
+                </>}
                 <button type="button" onClick={() => setVerCorte(true)} className={`${botonGrande} bg-gray-700 hover:bg-gray-800`}>Corte X</button>
                 <CanAccess permission="caja.cerrar">
                     <button type="button" onClick={() => navigate('/caja/cierre')} className={`${botonGrande} bg-gray-900 hover:bg-black`}>Cerrar turno</button>

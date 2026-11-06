@@ -21,11 +21,13 @@ import RolesPermisos from "./pages/RolesPermisos/RolesPermisos.tsx";
 import PermisosTodos from "./pages/RolesPermisos/PermisosTodos.tsx";
 import Usuarios from "./pages/RolesPermisos/Usuarios.tsx";
 import Auditoria from "./pages/RolesPermisos/Auditoria.tsx";
+import Notificaciones from "./pages/Notificaciones/Notificaciones.tsx";
 import UnidadMedidaConfig from "./pages/Configuracion/UnidadMedida/UnidadMedida.tsx";
 import CategoriasConfig from "./pages/Configuracion/Categorias/Categorias.tsx";
 import ProductosCatalogo from "./pages/Productos/ProductosCatalogo.tsx";
 import ProductoRegistro from "./pages/Productos/ProductoRegistro.tsx";
 import ProductoEditar from "./pages/Productos/ProductoEditar.tsx";
+import OrdenPos from "./pages/Productos/OrdenPos.tsx";
 import InventarioStock from "./pages/Inventario/Inventario.tsx";
 import InventarioEntradas from "./pages/Inventario/InventarioEntradas.tsx";
 import InventarioNuevoRegistro from "./pages/Inventario/InventarioNuevoRegistro.tsx";
@@ -60,6 +62,10 @@ import Clientes from "./pages/Clientes/Clientes.tsx";
 import ClienteDetalle from "./pages/Clientes/ClienteDetalle.tsx";
 import CuentasCobrar from "./pages/Clientes/CuentasCobrar.tsx";
 import PedidosEspeciales from "./pages/Pedidos/PedidosEspeciales.tsx";
+import MiCuenta from "./pages/MiCuenta.tsx";
+import Manuales from "./pages/Manuales/Manuales.tsx";
+import PermisosManuales from "./pages/Manuales/PermisosManuales.tsx";
+import AutorizacionModal from "./components/common/AutorizacionModal.tsx";
 
 export default function App() {
   return (
@@ -87,6 +93,8 @@ export default function App() {
             }}
         />
 
+        <AutorizacionModal />
+
         <Router>
           <ScrollToTop />
 
@@ -109,6 +117,7 @@ export default function App() {
 
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/mi-cuenta" element={<MiCuenta />} />
 
 
 
@@ -186,6 +195,15 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
+                  { /* ORDEN DE LOS BOTONES DEL POS */}
+                  <Route
+                      path="/admin/productos/orden-pos"
+                      element={
+                          <PermissionRoute permission="productos.gestionar">
+                              <OrdenPos />
+                          </PermissionRoute>
+                      }
+                  />
                   { /* PRODUCTOS EDITAR */}
                   <Route
                       path="/admin/productos/editar/:id"
@@ -220,8 +238,12 @@ export default function App() {
                   <Route path="/produccion/resumen" element={<PermissionRoute permissions={["produccion.ver", "produccion.registrar"]}><ResumenProduccion /></PermissionRoute>} />
                   <Route path="/admin/mesas" element={<PermissionRoute permission="mesas.configurar"><MesasConfig /></PermissionRoute>} />
                   <Route path="/admin/auditoria" element={<PermissionRoute permission="auditoria.ver"><Auditoria /></PermissionRoute>} />
+                  <Route path="/notificaciones" element={<Notificaciones />} />
                   <Route path="/reportes" element={<PermissionRoute permission="reportes.ver"><Reportes /></PermissionRoute>} />
-                  <Route path="/gastos" element={<PermissionRoute permissions={["gastos.ver", "gastos.registrar"]}><Gastos /></PermissionRoute>} />
+                  <Route path="/manuales" element={<PermissionRoute permission="manuales.ver"><Manuales /></PermissionRoute>} />
+                  <Route path="/manuales/permisos" element={<PermissionRoute permission="roles.gestionar"><PermisosManuales /></PermissionRoute>} />
+                  <Route path="/manuales/:id" element={<PermissionRoute permission="manuales.ver"><Manuales /></PermissionRoute>} />
+                  <Route path="/gastos" element={<PermissionRoute permissions={["gastos.ver", "gastos.registrar", "gastos.categorias"]}><Gastos /></PermissionRoute>} />
                   <Route path="/mermas" element={<PermissionRoute permissions={["mermas.registrar", "produccion.ver"]}><Mermas /></PermissionRoute>} />
 
                   { /* CONFIGURACIÓN DEL NEGOCIO */}

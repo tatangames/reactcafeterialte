@@ -8,8 +8,10 @@ import CobroModal from '../../components/pos/CobroModal';
 import EstadoConexion from '../../components/pos/EstadoConexion';
 import DescuentoModal from '../../components/pos/DescuentoModal';
 import PrecuentasModal from '../../components/pos/PrecuentasModal';
+import PedidosMostradorModal from '../../components/pos/PedidosMostradorModal';
+import ModificadoresModal from '../../components/mesas/ModificadoresModal';
+import IngredientesModal from '../../components/mesas/IngredientesModal';
 import TicketVenta from '../../components/pos/TicketVenta';
-import ClienteBuscador from '../../components/clientes/ClienteBuscador';
 import { getCliente, getPedidoEspecial } from '../../services/clientes';
 import { mensajeError } from '../../utils/formato';
 import { useAuth } from '../../context/AuthContext';
@@ -17,12 +19,13 @@ import { usePosHook } from '../../hooks/pos/usePosHook';
 import { STORAGE_URL } from '../../services/api';
 import { LineaCarritoInterface, ProductoPosInterface } from '../../types/pos';
 import { cantidad, dinero } from '../../utils/formato';
+import { claveDe, precioDe } from '../../utils/carrito';
 
-function TarjetaProducto({ producto, onClick }: { producto: ProductoPosInterface; onClick: () => void }) {
+function TarjetaProducto({ producto, bloqueado, onClick }: { producto: ProductoPosInterface; bloqueado: boolean; onClick: () => void }) {
     const agotado = producto.controla_stock && (producto.stock ?? 0) <= 0;
     return (
         <button type="button" onClick={onClick}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97]"
+            className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97] ${bloqueado ? 'opacity-50' : ''}`}
             style={{ borderTop: `6px solid ${producto.color || '#E5E7EB'}` }}>
             <div className="relative h-24 w-full bg-gray-50">
                 {producto.imagen
@@ -39,7 +42,7 @@ function TarjetaProducto({ producto, onClick }: { producto: ProductoPosInterface
             <div className="flex flex-1 flex-col justify-between p-2.5">
                 <p className="text-sm font-medium leading-tight text-gray-800 line-clamp-2">{producto.nombre}</p>
                 <p className="mt-1 text-base font-bold text-blue-700">
-                    {producto.consumo_interno ? <span className="text-xs font-semibold text-blue-700">Consumo interno</span> : dinero(producto.precio)}{producto.permite_fraccion && producto.unidad ? <span className="text-xs font-normal text-gray-500"> /{producto.unidad}</span> : null}
+                    {producto.consumo_interno ? <span className="text-xs font-semibold text-blue-700">Consumo interno</span> : dinero(producto.precio)}{(producto.grupos?.length ?? 0) > 0 ? <span className="text-xs font-normal text-gray-500"> +</span> : null}{producto.permite_fraccion && producto.unidad ? <span className="text-xs font-normal text-gray-500"> /{producto.unidad}</span> : null}
                 </p>
             </div>
         </button>
@@ -51,11 +54,16 @@ export default function PosPage() {
     const { user, hasPermission } = useAuth();
     const pos = usePosHook();
 
-    const [cantidadDe, setCantidadDe] = useState<{ producto: ProductoPosInterface; inicial?: number } | null>(null);
+    const [cantidadDe, setCantidadDe] = useState<{ producto: ProductoPosInterface; inicial?: number; clave?: string } | null>(null);
     const [descuentoDe, setDescuentoDe] = useState<LineaCarritoInterface | 'global' | null>(null);
     const [precuentasAbiertas, setPrecuentasAbiertas] = useState(false);
     const [nombrePrecuenta, setNombrePrecuenta] = useState<string | null>(null);
-    const [eligiendoCliente, setEligiendoCliente] = useState(false);
+    // Extras al tocar el producto (o al editar una línea del carrito) e ingredientes de una línea
+    const [extrasDe, setExtrasDe] = useState<{ producto: ProductoPosInterface; linea?: LineaCarritoInterface } | null>(null);
+    const [ingredientesDe, setIngredientesDe] = useState<LineaCarritoInterface | null>(null);
+    // Enviar comanda sin cobrar: nombre del cliente y la lista «Por cobrar»
+    const [nombreComanda, setNombreComanda] = useState<string | null>(null);
+    const [verPedidos, setVerPedidos] = useState(false);
     const busquedaRef = useRef<HTMLInputElement>(null);
     const [params, setParams] = useSearchParams();
     const pedidoParam = params.get('pedido');
@@ -82,17 +90,26 @@ export default function PosPage() {
 
     // El lector de códigos escribe donde esté el foco: se mantiene en la búsqueda
     useEffect(() => {
-        if (!pos.cobrando && !cantidadDe && !descuentoDe && !pos.ventaRealizada && !eligiendoCliente) busquedaRef.current?.focus();
-    }, [pos.cobrando, cantidadDe, descuentoDe, pos.ventaRealizada, eligiendoCliente]);
+        if (!pos.cobrando && !cantidadDe && !descuentoDe && !pos.ventaRealizada && !extrasDe && !ingredientesDe
+            && nombreComanda === null && !verPedidos) busquedaRef.current?.focus();
+    }, [pos.cobrando, cantidadDe, descuentoDe, pos.ventaRealizada, extrasDe, ingredientesDe, nombreComanda, verPedidos]);
 
+    // Con extras (Leche, Endulzante) primero se eligen; por peso se pide la cantidad; si no, se suma 1
     const tocarProducto = (p: ProductoPosInterface) => {
-        if (p.permite_fraccion) setCantidadDe({ producto: p });
+        if (pos.agotado(p)) { toast.error(`No hay existencia de ${p.nombre}`); return; }
+        if (p.grupos?.length) setExtrasDe({ producto: p });
+        else if (p.permite_fraccion) setCantidadDe({ producto: p });
         else pos.agregar(p);
+    };
+
+    const enviarComanda = () => {
+        if (pos.agregandoA) pos.enviarPedido();
+        else setNombreComanda('');
     };
 
     const maxDescuento = Number(pos.negocio?.descuento_max_sin_autorizacion ?? 10);
     const lineaDescuento = descuentoDe && descuentoDe !== 'global' ? descuentoDe : null;
-    const importeLinea = lineaDescuento ? Math.round(lineaDescuento.producto.precio * lineaDescuento.cantidad * 100) / 100 : 0;
+    const importeLinea = lineaDescuento ? Math.round(precioDe(lineaDescuento) * lineaDescuento.cantidad * 100) / 100 : 0;
 
     // ── Sin turno abierto: no se puede vender ───────────────────
     if (!pos.esperandoCaja && !pos.turno) {
@@ -126,6 +143,11 @@ export default function PosPage() {
                 <div className="ml-auto flex items-center gap-2">
                     <EstadoConexion />
                     <Link to="/pos" className="px-4 py-2.5 text-sm font-semibold text-white bg-cyan-600 hover:bg-cyan-700 rounded-xl">Mesas</Link>
+                    <button type="button" onClick={() => { pos.cargarPedidos(); setVerPedidos(true); }} disabled={!pos.enLinea}
+                        title={pos.enLinea ? 'Pedidos con la comanda enviada que falta cobrar' : 'Necesita conexión con el servidor'}
+                        className={`px-4 py-2.5 text-sm font-semibold rounded-xl disabled:opacity-40 ${pos.pedidos.length ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}>
+                        Por cobrar ({pos.pedidos.length})
+                    </button>
                     {hasPermission('pos.precuentas') && (
                         <button type="button" onClick={() => setPrecuentasAbiertas(true)} className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl">
                             Precuentas
@@ -153,7 +175,7 @@ export default function PosPage() {
                             placeholder="Buscar producto o escanear código..."
                             className="h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-base focus:border-blue-400 focus:outline-none"
                         />
-                        <div className="flex gap-2 overflow-x-auto pb-1">
+                        <div className="flex flex-wrap gap-2 pb-1">
                             {[{ id: null as number | null, nombre: 'Todos' }, ...(pos.catalogo?.categorias ?? [])].map((c) => (
                                 <button key={c.id ?? 'todos'} type="button" onClick={() => { pos.setCategoria(c.id); pos.setBusqueda(''); }}
                                     className={`whitespace-nowrap rounded-xl px-5 py-3 text-sm font-semibold transition ${
@@ -172,7 +194,7 @@ export default function PosPage() {
                         )}
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
                             {pos.productosVisibles.map((p) => (
-                                <TarjetaProducto key={p.id} producto={p} onClick={() => tocarProducto(p)} />
+                                <TarjetaProducto key={p.id} producto={p} bloqueado={pos.agotado(p)} onClick={() => tocarProducto(p)} />
                             ))}
                         </div>
                     </div>
@@ -185,14 +207,16 @@ export default function PosPage() {
                         totales={pos.totales}
                         precuenta={pos.carrito.precuenta}
                         cliente={pos.carrito.cliente}
-                        puedeClientes={hasPermission('clientes.ver') || hasPermission('pos.vender')}
-                        onCliente={() => setEligiendoCliente(true)}
-                        onQuitarCliente={() => pos.asignarCliente(null)}
                         tieneDescuentoGlobal={!!pos.carrito.descuentoGlobal}
                         puedeDescontar={hasPermission('pos.descuento') || hasPermission('pos.descuento.autorizar')}
                         puedePrecuentas={hasPermission('pos.precuentas')}
                         onCantidad={pos.cambiarCantidad}
-                        onEditarCantidad={(l) => setCantidadDe({ producto: l.producto, inicial: l.cantidad })}
+                        onEditarCantidad={(l) => setCantidadDe({ producto: l.producto, inicial: l.cantidad, clave: claveDe(l) })}
+                        onEditarLinea={(l) => setExtrasDe({ producto: l.producto, linea: l })}
+                        onIngredientes={(l) => setIngredientesDe(l)}
+                        agregandoA={pos.agregandoA?.nombre ?? null}
+                        onEnviarComanda={enviarComanda}
+                        onNoAgregar={() => pos.setAgregandoA(null)}
                         onDescuentoLinea={(l) => setDescuentoDe(l)}
                         onDescuentoGlobal={() => setDescuentoDe('global')}
                         onGuardarPrecuenta={() => setNombrePrecuenta(pos.carrito.precuenta?.nombre ?? '')}
@@ -209,7 +233,7 @@ export default function PosPage() {
                 onCancel={() => setCantidadDe(null)}
                 onConfirm={(c) => {
                     if (!cantidadDe) return;
-                    if (cantidadDe.inicial !== undefined) pos.cambiarCantidad(cantidadDe.producto.id, c);
+                    if (cantidadDe.inicial !== undefined) pos.cambiarCantidad(cantidadDe.clave ?? `p${cantidadDe.producto.id}`, c);
                     else pos.agregar(cantidadDe.producto, c);
                     setCantidadDe(null);
                 }}
@@ -224,7 +248,7 @@ export default function PosPage() {
                 onCancel={() => setDescuentoDe(null)}
                 onConfirm={(d) => {
                     if (descuentoDe === 'global') pos.descuentoGlobal(d);
-                    else if (lineaDescuento) pos.descuentoLinea(lineaDescuento.producto.id, d);
+                    else if (lineaDescuento) pos.descuentoLinea(claveDe(lineaDescuento), d);
                     setDescuentoDe(null);
                 }}
             />
@@ -241,19 +265,55 @@ export default function PosPage() {
                 onConfirm={pos.cobrar}
             />
 
-            {eligiendoCliente && (
+            <ModificadoresModal
+                producto={extrasDe ? { ...extrasDe.producto, grupos: extrasDe.producto.grupos ?? [] } : null}
+                grupos={pos.catalogo?.grupos ?? []}
+                inicial={extrasDe?.linea ? { modificadores: extrasDe.linea.modificadores ?? [], cantidad: extrasDe.linea.cantidad, notas: extrasDe.linea.notas } : null}
+                onCancel={() => setExtrasDe(null)}
+                onConfirm={(d) => {
+                    if (!extrasDe) return;
+                    const ok = extrasDe.linea
+                        ? pos.editarLinea(claveDe(extrasDe.linea), d)
+                        : pos.agregar(extrasDe.producto, d.cantidad, { modificadores: d.modificadores, notas: d.notas });
+                    if (ok) setExtrasDe(null);
+                }}
+            />
+
+            <IngredientesModal
+                titulo={ingredientesDe?.producto.nombre ?? null}
+                receta={ingredientesDe?.producto.receta ?? []}
+                actuales={ingredientesDe?.ajustes ?? []}
+                onCancel={() => setIngredientesDe(null)}
+                onConfirm={(ajustes) => { if (ingredientesDe) pos.ajustarLinea(claveDe(ingredientesDe), ajustes); setIngredientesDe(null); }}
+            />
+
+            {nombreComanda !== null && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-                    <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold">Cliente de la venta</h2>
-                            <button type="button" onClick={() => setEligiendoCliente(false)} className="h-10 w-10 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Cerrar">✕</button>
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+                        <div>
+                            <h2 className="text-lg font-semibold">Enviar comanda</h2>
+                            <p className="text-sm text-gray-500">Sale a cocina o barra ahora; se cobra cuando el cliente recoja.</p>
                         </div>
-                        {pos.enLinea
-                            ? <ClienteBuscador autoFocus onSelect={(c) => { pos.asignarCliente(c); setEligiendoCliente(false); }} />
-                            : <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Sin conexión con el servidor no se pueden buscar clientes.</p>}
+                        <input type="text" value={nombreComanda} onChange={(e) => setNombreComanda(e.target.value)} maxLength={60} autoFocus
+                            onKeyDown={async (e) => { if (e.key === 'Enter' && nombreComanda.trim() && await pos.enviarPedido(nombreComanda)) setNombreComanda(null); }}
+                            placeholder="¿A nombre de quién? (Juan, señora de rojo, #3)"
+                            className="w-full h-12 rounded-xl border border-gray-300 px-4 text-base focus:border-blue-400 focus:outline-none" />
+                        <div className="flex gap-2">
+                            <button type="button" onClick={() => setNombreComanda(null)} className="flex-1 py-3 text-sm bg-gray-100 hover:bg-gray-200 rounded-xl">Cancelar</button>
+                            <button type="button" disabled={!nombreComanda.trim() || pos.guardando}
+                                onClick={async () => { if (await pos.enviarPedido(nombreComanda)) setNombreComanda(null); }}
+                                className="flex-1 py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50">
+                                Enviar {dinero(pos.totales.total)}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
+
+            <PedidosMostradorModal isOpen={verPedidos} cajaId={pos.cajaId} pedidos={pos.pedidos} metodos={pos.metodosPago}
+                onClose={() => setVerPedidos(false)} onCambio={pos.cargarPedidos}
+                onCobrado={(v) => { setVerPedidos(false); pos.pedidoCobrado(v); }}
+                onAgregarA={(p) => { setVerPedidos(false); pos.setAgregandoA(p); }} />
 
             <PrecuentasModal isOpen={precuentasAbiertas} onClose={() => setPrecuentasAbiertas(false)} onAbrir={pos.abrirPrecuenta} />
 

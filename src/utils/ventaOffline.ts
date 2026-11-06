@@ -4,7 +4,7 @@
 import { MetodoPagoInterface } from "../types/caja";
 import { DescuentoInterface, LineaCarritoInterface, PagoFormInterface, VentaInterface } from "../types/pos";
 import { VentaOfflinePayload } from "../services/sync";
-import { redondear, TotalesCarrito } from "./carrito";
+import { detalleDe, itemDeLinea, precioDe, redondear, TotalesCarrito } from "./carrito";
 
 const CLAVE_SECUENCIA = "pos_secuencia_offline";
 
@@ -52,9 +52,8 @@ export const construirVentaOffline = (d: Datos): { payload: VentaOfflinePayload;
         numero_provisional: numero,
         fecha_venta: ahora.toISOString(),
         items: d.lineas.map((l) => ({
-            producto_id: l.producto.id,
-            cantidad: l.cantidad,
-            precio_unitario: l.producto.precio,
+            ...itemDeLinea(l),
+            precio_unitario: precioDe(l),
             descuento_tipo: l.descuento?.tipo ?? null,
             descuento_valor: l.descuento?.valor ?? 0,
         })),
@@ -104,10 +103,10 @@ export const construirVentaOffline = (d: Datos): { payload: VentaOfflinePayload;
         detalles: d.lineas.map((l, i) => ({
             id: i + 1,
             producto_id: l.producto.id,
-            nombre: l.producto.nombre,
+            nombre: detalleDe(l) ? `${l.producto.nombre} (${detalleDe(l)})${l.notas ? ` · ${l.notas}` : ""}` : l.producto.nombre + (l.notas ? ` · ${l.notas}` : ""),
             unidad: l.producto.unidad,
             cantidad: l.cantidad,
-            precio_unitario: l.producto.precio,
+            precio_unitario: precioDe(l),
             descuento: d.totales.lineas[i]?.descuento ?? 0,
             subtotal: d.totales.lineas[i]?.subtotal ?? 0,
             cantidad_devuelta: 0,

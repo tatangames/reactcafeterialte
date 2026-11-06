@@ -18,6 +18,8 @@ export interface ItemVentaPayload {
     descuento_tipo?: TipoDescuento | null;
     descuento_valor?: number;
     notas?: string;
+    modificadores?: number[];
+    ajustes?: { producto_id: number; cantidad: number }[];
 }
 
 export interface VentaPayload {

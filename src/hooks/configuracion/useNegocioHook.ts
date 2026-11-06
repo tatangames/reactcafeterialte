@@ -9,6 +9,10 @@ import { ConfiguracionNegocioFormInterface, ConfiguracionNegocioInterface } from
 const initialForm: ConfiguracionNegocioFormInterface = {
     nombre: "",
     razon_social: "",
+    nit: "",
+    nrc: "",
+    actividad_economica: "",
+    tipo_establecimiento: "Sucursal / Agencia",
     direccion: "",
     telefono: "",
     correo: "",
@@ -25,6 +29,10 @@ const initialForm: ConfiguracionNegocioFormInterface = {
 const aFormulario = (c: ConfiguracionNegocioInterface): ConfiguracionNegocioFormInterface => ({
     nombre: c.nombre ?? "",
     razon_social: c.razon_social ?? "",
+    nit: c.nit ?? "",
+    nrc: c.nrc ?? "",
+    actividad_economica: c.actividad_economica ?? "",
+    tipo_establecimiento: c.tipo_establecimiento ?? "",
     direccion: c.direccion ?? "",
     telefono: c.telefono ?? "",
     correo: c.correo ?? "",

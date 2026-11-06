@@ -5,9 +5,10 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../components/common/PageHeader';
 import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
+import NotaCreditoModal from '../../components/compras/NotaCreditoModal';
 import { getCuentasPagar, getPagosProveedor } from '../../services/compras';
 import { dinero, fechaCorta, mensajeError } from '../../utils/formato';
-import { CuentasPagarResponseInterface, PagoProveedorInterface } from '../../types/compras';
+import { CuentaPagarInterface, CuentasPagarResponseInterface, PagoProveedorInterface } from '../../types/compras';
 import { PaginaInterface } from '../../types/interfaces';
 
 type Vista = 'pendiente' | 'vencidas' | 'pagada' | 'pagos';
@@ -19,6 +20,8 @@ export default function CuentasPagar() {
     const [pagina, setPagina] = useState(1);
     const [cuentas, setCuentas] = useState<CuentasPagarResponseInterface | null>(null);
     const [pagos, setPagos] = useState<(PaginaInterface & { pagos: PagoProveedorInterface[] }) | null>(null);
+    const [notaDe, setNotaDe] = useState<CuentaPagarInterface | null>(null);
+    const [recargar, setRecargar] = useState(0);
 
     useEffect(() => {
         if (vista === 'pagos') {
@@ -26,7 +29,13 @@ export default function CuentasPagar() {
         } else {
             getCuentasPagar({ estado: vista, page: pagina }).then(setCuentas).catch(e => toast.error(mensajeError(e, 'Error al cargar las cuentas')));
         }
-    }, [vista, pagina]);
+    }, [vista, pagina, recargar]);
+
+    // Tras registrar o anular una nota: se actualiza la ventana y la lista (saldo y resumen)
+    const alCambiarNota = (c: CuentaPagarInterface) => {
+        setNotaDe({ ...c, proveedor: notaDe?.proveedor, proveedor_id: notaDe?.proveedor_id });
+        setRecargar(n => n + 1);
+    };
 
     const resumen = cuentas?.resumen;
 
@@ -78,10 +87,10 @@ export default function CuentasPagar() {
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
                                 <tr><th className="px-4 py-3">Proveedor</th><th className="px-4 py-3">Compra</th><th className="px-4 py-3">Documento</th><th className="px-4 py-3">Vence</th>
-                                    <th className="px-4 py-3 text-right">Monto</th><th className="px-4 py-3 text-right">Saldo</th><th className="px-4 py-3">Estado</th></tr>
+                                    <th className="px-4 py-3 text-right">Monto</th><th className="px-4 py-3 text-right">Saldo</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3"></th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {cuentas?.cuentas.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No hay cuentas</td></tr>}
+                                {cuentas?.cuentas.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No hay cuentas</td></tr>}
                                 {cuentas?.cuentas.map(c => (
                                     <tr key={c.id} onClick={() => navigate(`/compras/proveedores/${c.proveedor_id}`)} className="cursor-pointer hover:bg-gray-50">
                                         <td className="px-4 py-3 font-medium">{c.proveedor}</td>
@@ -89,11 +98,24 @@ export default function CuentasPagar() {
                                         <td className="px-4 py-3">{c.documento ?? '—'}</td>
                                         <td className="px-4 py-3">{fechaCorta(c.fecha_vencimiento)}</td>
                                         <td className="px-4 py-3 text-right">{dinero(c.monto)}</td>
-                                        <td className="px-4 py-3 text-right font-semibold">{dinero(c.saldo)}</td>
+                                        <td className="px-4 py-3 text-right font-semibold">
+                                            {dinero(c.saldo)}
+                                            {(c.notas_credito ?? []).some(n => !n.anulada) && (
+                                                <span className="block text-xs font-normal text-blue-700">
+                                                    −{dinero((c.notas_credito ?? []).filter(n => !n.anulada).reduce((t, n) => t + n.monto, 0))} en notas
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {c.estado === 'pagada' ? <StatusBadge tone="success">Pagada</StatusBadge>
                                                 : c.vencida ? <StatusBadge tone="danger">Vencida · {c.dias_vencida} días</StatusBadge>
                                                     : <StatusBadge tone="info">Al día</StatusBadge>}
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); setNotaDe(c); }}
+                                                className="whitespace-nowrap rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
+                                                {c.saldo > 0 ? 'Nota de crédito' : 'Ver notas'}
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -103,6 +125,8 @@ export default function CuentasPagar() {
                     </>
                 )}
             </div>
+
+            <NotaCreditoModal cuenta={notaDe} onCerrar={() => setNotaDe(null)} onCambio={alCambiarNota} />
         </div>
     );
 }

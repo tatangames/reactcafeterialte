@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { getProductosTable } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import { ProductoInterface } from "../../types/interfaces";
+import { sinTildes } from "../../utils/texto";
 
 export function useProductosCatalogoHook() {
     const [data, setData] = useState<ProductoInterface[]>([]);
@@ -30,13 +31,13 @@ export function useProductosCatalogoHook() {
         }
     };
 
-    const texto = filterText.toLowerCase();
+    const texto = sinTildes(filterText);
     const filteredData = data.filter(
         (item) =>
             (!claseFiltro || item.clase === claseFiltro) &&
-            (item.nombre.toLowerCase().includes(texto) ||
-                (item.sku ?? "").toLowerCase().includes(texto) ||
-                (item.codigo_barras ?? "").toLowerCase().includes(texto))
+            (sinTildes(item.nombre).includes(texto) ||
+                sinTildes(item.sku ?? "").includes(texto) ||
+                sinTildes(item.codigo_barras ?? "").includes(texto))
     );
 
     return {

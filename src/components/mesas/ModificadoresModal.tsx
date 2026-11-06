@@ -1,29 +1,33 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import QtyStepper from "../form/QtyStepper";
 import { dinero } from "../../utils/formato";
 import { GrupoModificadorInterface, ProductoMesaInterface } from "../../types/mesas";
 
 interface Props {
-    producto: ProductoMesaInterface | null;
+    // Sirve para la mesa y la venta rápida: solo usa id, nombre, precio y grupos
+    producto: Pick<ProductoMesaInterface, "id" | "nombre" | "precio" | "grupos"> | null;
     grupos: GrupoModificadorInterface[];
+    // Al editar una línea ya agregada: abre con lo que tenía elegido
+    inicial?: { modificadores: number[]; cantidad: number; notas?: string } | null;
     onCancel: () => void;
     onConfirm: (datos: { modificadores: number[]; cantidad: number; notas: string }) => void;
 }
 
 // Elegir extras (leche, saborizante, tamaño), cantidad y nota de un producto
-export default function ModificadoresModal({ producto, grupos, onCancel, onConfirm }: Props) {
-    const [elegidos, setElegidos] = useState<Record<number, number[]>>({});
-    const [cantidad, setCantidad] = useState(1);
-    const [notas, setNotas] = useState("");
+export default function ModificadoresModal(props: Props) {
+    // Se monta de cero por producto: empieza sin extras (o con los de la línea que se edita)
+    return props.producto ? <Contenido key={props.producto.id} {...props} producto={props.producto} /> : null;
+}
 
-    useEffect(() => {
-        setElegidos({});
-        setCantidad(1);
-        setNotas("");
-    }, [producto]);
-
-    if (!producto) return null;
+function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & { producto: NonNullable<Props["producto"]> }) {
+    const [elegidos, setElegidos] = useState<Record<number, number[]>>(() => {
+        const ids = inicial?.modificadores ?? [];
+        return Object.fromEntries(grupos.filter((g) => producto.grupos.includes(g.id))
+            .map((g) => [g.id, g.opciones.filter((o) => ids.includes(o.id)).map((o) => o.id)]));
+    });
+    const [cantidad, setCantidad] = useState(inicial?.cantidad ?? 1);
+    const [notas, setNotas] = useState(inicial?.notas ?? "");
 
     const suyos = grupos.filter((g) => producto.grupos.includes(g.id));
     const extra = suyos.reduce((s, g) => s + g.opciones.filter((o) => elegidos[g.id]?.includes(o.id)).reduce((t, o) => t + o.precio, 0), 0);
@@ -56,11 +60,15 @@ export default function ModificadoresModal({ producto, grupos, onCancel, onConfi
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                                 {g.opciones.map((o) => {
                                     const activo = elegidos[g.id]?.includes(o.id);
+                                    // Sin existencia de su insumo no se elige (si ya venía elegida, se puede quitar)
+                                    const agotada = !!o.agotado && !activo;
                                     return (
-                                        <button key={o.id} type="button" onClick={() => alternar(g, o.id)}
-                                            className={`min-h-14 rounded-xl border-2 px-3 py-2 text-left text-sm transition ${activo ? "border-blue-600 bg-blue-50 font-semibold text-blue-800" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
-                                            <span className="block">{o.nombre}</span>
-                                            {o.precio > 0 && <span className="text-xs text-gray-500">+{dinero(o.precio)}</span>}
+                                        <button key={o.id} type="button" onClick={() => alternar(g, o.id)} disabled={agotada}
+                                            title={agotada ? "No hay existencia de su insumo" : undefined}
+                                            className={`min-h-14 rounded-xl border-2 px-3 py-2 text-left text-sm transition ${activo ? "border-blue-600 bg-blue-50 font-semibold text-blue-800" : agotada ? "cursor-not-allowed border-dashed border-gray-200 bg-gray-50 text-gray-400" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
+                                            <span className={`block ${agotada ? "line-through" : ""}`}>{o.nombre}</span>
+                                            {agotada ? <span className="text-xs font-semibold text-red-600">Agotado</span>
+                                                : o.precio > 0 && <span className="text-xs text-gray-500">+{dinero(o.precio)}</span>}
                                         </button>
                                     );
                                 })}
@@ -81,7 +89,7 @@ export default function ModificadoresModal({ producto, grupos, onCancel, onConfi
                         <button type="button" disabled={faltan.length > 0}
                             onClick={() => onConfirm({ modificadores: Object.values(elegidos).flat(), cantidad, notas: notas.trim() })}
                             className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700 disabled:opacity-40">
-                            Agregar {dinero(unitario * cantidad)}
+                            {inicial ? "Guardar" : "Agregar"} {dinero(unitario * cantidad)}
                         </button>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 
 import { getRolesTable, borrarRolGlobal, crearNuevoRol } from "../../services/api";
 import { getToken } from "../../utils/auth";
+import { sinTildes } from "../../utils/texto";
 
 interface Role {
     id: number;
@@ -102,7 +103,7 @@ export function useRoles() {
     };
 
     const filteredData = data.filter((item) =>
-        item.name.toLowerCase().includes(filterText.toLowerCase())
+        sinTildes(item.name).includes(sinTildes(filterText))
     );
 
     return {

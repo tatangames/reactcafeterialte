@@ -20,7 +20,7 @@ export default function Impresoras() {
     const {
         data, loading, isModalOpen, isEditing, isSaving, form, setForm,
         abrirModalNuevo, abrirModalEditar, cerrarModal, handleGuardar, handleEliminar,
-        probando, resultadoPrueba, handleProbar, trabajos, reintentando, handleReintentar,
+        probando, probandoProduccion, resultadoPrueba, handleProbar, trabajos, reintentando, handleReintentar, handleEliminarTrabajo, handleEliminarTodos,
     } = useImpresoras();
 
     const [eliminando, setEliminando] = useState<ImpresoraInterface | null>(null);
@@ -208,7 +208,12 @@ export default function Impresoras() {
                                 <div className="flex flex-wrap gap-2 pt-1">
                                     <button type="button" onClick={() => handleProbar(imp.id)} disabled={probando === imp.id}
                                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">
-                                        {probando === imp.id ? "Enviando..." : "Imprimir prueba"}
+                                        {probando === imp.id && !probandoProduccion ? "Enviando..." : "Imprimir prueba"}
+                                    </button>
+                                    <button type="button" onClick={() => handleProbar(imp.id, true)} disabled={probando === imp.id}
+                                        title="Imprime una comanda de ejemplo (Mesa 1, Ice latte) con el formato de cocina y barra"
+                                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50">
+                                        {probando === imp.id && probandoProduccion ? "Enviando..." : "Prueba producción"}
                                     </button>
                                     <button type="button" onClick={() => abrirModalEditar(imp)} className="px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">Editar</button>
                                     <button type="button" onClick={() => setEliminando(imp)} className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">Eliminar</button>
@@ -222,7 +227,12 @@ export default function Impresoras() {
                 <div className="mt-8 rounded-xl border border-gray-200 bg-white shadow-sm">
                     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
                         <h2 className="font-semibold text-gray-800">Impresiones con error</h2>
-                        <span className="text-xs text-gray-500">{trabajos.length}</span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-500">{trabajos.length}</span>
+                            {trabajos.length > 1 && (
+                                <button type="button" onClick={handleEliminarTodos} className="text-sm font-medium text-red-600 hover:underline">Eliminar todos</button>
+                            )}
+                        </div>
                     </div>
                     {trabajos.length === 0 && <p className="px-5 py-6 text-sm text-gray-500">Sin errores de impresión 👍</p>}
                     <div className="divide-y divide-gray-100">
@@ -246,6 +256,10 @@ export default function Impresoras() {
                                 <button type="button" onClick={() => handleReintentar(t)} disabled={reintentando === t.id}
                                     className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg disabled:opacity-50">
                                     {reintentando === t.id ? "Enviando..." : "Reintentar"}
+                                </button>
+                                <button type="button" onClick={() => handleEliminarTrabajo(t)} disabled={reintentando === t.id}
+                                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50">
+                                    Eliminar
                                 </button>
                             </div>
                         ))}

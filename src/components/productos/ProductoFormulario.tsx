@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import FormField, { inputClass } from "../form/FormField";
 import MoneyInput from "../form/MoneyInput";
+import OrdenPosCampo from "./OrdenPosCampo";
 import { CategoriasInterface, ClaseProducto, ProductoFormInterface, UnidadMedidaInterface } from "../../types/interfaces";
 import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
 import { COLORES_POS, defaultsPorClase, margen } from "../../utils/productoForm";
@@ -295,10 +296,8 @@ export default function ProductoFormulario({
                             </div>
                         </FormField>
 
-                        <FormField label="Orden" hint="Los números menores aparecen primero">
-                            <input type="number" min={0} value={form.orden_pos}
-                                onChange={(e) => onChange("orden_pos", e.target.value)} className={inputClass} />
-                        </FormField>
+                        <OrdenPosCampo valor={form.orden_pos} nombre={form.nombre} categorias={form.categorias}
+                            productoId={productoId} onChange={(v) => onChange("orden_pos", v)} />
                     </div>
                 )}
             </div>

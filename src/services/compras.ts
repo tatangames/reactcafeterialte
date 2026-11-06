@@ -2,6 +2,7 @@
 
 import { api } from "./api";
 import {
+    CuentaPagarInterface,
     CompraInterface,
     ComprasResponseInterface,
     CuentasPagarResponseInterface,
@@ -161,6 +162,17 @@ export const registrarPagoProveedor = async (
 ) => {
     const { data } = await api.post(`/cuentas-pagar/proveedores/${proveedorId}/pagos`, payload);
     return data as { success: number; message: string; pago: PagoProveedorInterface; proveedor: ProveedorInterface };
+};
+
+// Nota de crédito: rebaja lo que se debe de una compra sin mover caja
+export const registrarNotaCredito = async (cuentaId: number, datos: { monto: number; motivo: string; documento?: string }) => {
+    const { data } = await api.post(`/cuentas-pagar/${cuentaId}/notas-credito`, datos);
+    return data as { success: number; message: string; cuenta: CuentaPagarInterface };
+};
+
+export const anularNotaCredito = async (notaId: number, motivo: string) => {
+    const { data } = await api.post(`/cuentas-pagar/notas-credito/${notaId}/anular`, { motivo });
+    return data as { success: number; message: string; cuenta: CuentaPagarInterface };
 };
 
 export const anularPagoProveedor = async (pagoId: number, motivo: string) => {

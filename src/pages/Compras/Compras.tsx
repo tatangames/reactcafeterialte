@@ -7,6 +7,7 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import { inputClass } from '../../components/form/FormField';
+import SelectBuscador from '../../components/form/SelectBuscador';
 import MotivoModal from '../../components/modal/MotivoModal';
 import { useAuth } from '../../context/AuthContext';
 import { useCaja } from '../../context/CajaContext';
@@ -128,8 +129,10 @@ export default function Compras() {
                                 {detalle.observaciones && <p className="mt-1">Obs.: {detalle.observaciones}</p>}
                             </div>
                             <div className="min-w-[200px] space-y-1 text-sm">
-                                <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{dinero(detalle.subtotal)}</span></div>
-                                <div className="flex justify-between"><span className="text-gray-500">IVA</span><span>{dinero(detalle.impuesto)}</span></div>
+                                {Number(detalle.impuesto) > 0 && <>
+                                    <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{dinero(detalle.subtotal)}</span></div>
+                                    <div className="flex justify-between"><span className="text-gray-500">IVA</span><span>{dinero(detalle.impuesto)}</span></div>
+                                </>}
                                 <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{dinero(detalle.total)}</span></div>
                             </div>
                         </div>
@@ -158,10 +161,12 @@ export default function Compras() {
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <DateRangeFilter desde={rango.desde} hasta={rango.hasta} onChange={r => { setRango(r); setPagina(1); }} />
-                <select className={`${inputClass} !w-auto`} value={proveedorId} onChange={e => { setProveedorId(e.target.value); setPagina(1); }}>
-                    <option value="">Todos los proveedores</option>
-                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
+                {/* 0 = todos */}
+                <div className="w-64">
+                    <SelectBuscador value={proveedorId ? Number(proveedorId) : 0} placeholder="Buscar proveedor..."
+                        onChange={v => { setProveedorId(v ? String(v) : ''); setPagina(1); }}
+                        opciones={[{ value: 0, label: 'Todos los proveedores' }, ...proveedores.map(p => ({ value: p.id, label: p.nombre }))]} />
+                </div>
                 <select className={`${inputClass} !w-auto`} value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}>
                     <option value="">Registradas y anuladas</option>
                     <option value="registrada">Registradas</option>

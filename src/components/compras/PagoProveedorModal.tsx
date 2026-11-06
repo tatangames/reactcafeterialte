@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import FechaInput from "../form/FechaInput";
 import toast from "react-hot-toast";
 
 import FormField, { inputClass } from "../form/FormField";
@@ -118,7 +119,7 @@ export default function PagoProveedorModal({ proveedor, pendientes, cuentaInicia
                     </FormField>
                     {origen === "externo" && (
                         <FormField label="Fecha">
-                            <input type="date" className={inputClass} value={fecha} max={hoyLocal()} onChange={(e) => setFecha(e.target.value)} />
+                            <FechaInput className={inputClass} value={fecha} max={hoyLocal()} onChange={(v) => setFecha(v)} />
                         </FormField>
                     )}
                 </div>

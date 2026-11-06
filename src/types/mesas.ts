@@ -1,6 +1,6 @@
 // Tipos de mesas, cuentas separadas y comandas
 
-export type TipoTerminal = "mesa" | "caja" | "llevar";
+export type TipoTerminal = "mesa" | "caja";
 export type EstadoItem = "pendiente" | "enviado" | "en_preparacion" | "listo" | "entregado" | "cancelado";
 export type EstadoComanda = "pendiente" | "en_preparacion" | "terminada" | "entregada" | "cancelada";
 
@@ -27,6 +27,11 @@ export interface TerminalMapaInterface {
 
 export interface ModificadorElegido { id: number; grupo: string; opcion: string; precio: number }
 
+// Lo que lleva una unidad del plato según su receta (en la unidad del inventario)
+export interface IngredienteReceta { producto_id: number; nombre: string; base: number; unidad: string | null }
+// Lo que el cliente pidió distinto ("solo 1 huevo"): el precio no cambia
+export interface AjusteReceta extends IngredienteReceta { cantidad: number }
+
 export interface ItemOrdenInterface {
     id: number;
     ticket_id: number;
@@ -37,7 +42,10 @@ export interface ItemOrdenInterface {
     precio_unitario: number;
     subtotal: number;
     modificadores: ModificadorElegido[];
+    ajustes: AjusteReceta[];
+    texto_ajustes: string[];
     notas: string | null;
+    motivo_cancelacion: string | null;
     estado: EstadoItem;
     area: string | null;
     comanda: string | null;
@@ -62,6 +70,8 @@ export interface ComandaInterface {
     numero: string;
     orden_id: number;
     terminal: string;
+    terminal_tipo?: string; // mesa, caja…
+    cuenta?: string | null; // "Ticket 1", "Juan"
     area: string | null;
     color: string;
     estado: EstadoComanda;
@@ -71,7 +81,7 @@ export interface ComandaInterface {
     iniciada_at: string | null;
     terminada_at: string | null;
     entregada_at: string | null;
-    items: { id: number; nombre: string; cantidad: number; modificadores: string[]; notas: string | null; cancelado: boolean }[];
+    items: { id: number; nombre: string; cantidad: number; modificadores: string[]; ajustes: string[]; notas: string | null; cancelado: boolean }[];
 }
 
 export interface OrdenInterface {
@@ -95,7 +105,8 @@ export interface GrupoModificadorInterface {
     nombre: string;
     obligatorio: boolean;
     multiple: boolean;
-    opciones: { id: number; nombre: string; precio: number }[];
+    // agotado: su insumo (Leche entera) ya no alcanza; no se puede elegir
+    opciones: { id: number; nombre: string; precio: number; agotado?: boolean }[];
 }
 
 export interface ProductoMesaInterface {
@@ -110,6 +121,7 @@ export interface ProductoMesaInterface {
     categorias: number[];
     grupos: number[];
     stock: number | null;
+    receta: IngredienteReceta[];
 }
 
 export interface CatalogoMesasInterface {

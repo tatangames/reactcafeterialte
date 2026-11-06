@@ -13,15 +13,16 @@ export default function EstadoTurnoBoton() {
     }
 
     const turno = actual?.turno;
+    const ajeno = !!actual?.turno_ajeno;
     const titulo = turno
-        ? `${turno.caja}: turno abierto por ${turno.usuario_apertura}`
+        ? `${turno.caja}: turno abierto por ${turno.usuario_apertura}${ajeno ? " (ciérralo para abrir el tuyo)" : ""}`
         : actual ? `${actual.caja.nombre}: sin turno abierto` : "Caja";
 
     return (
         <Link to="/caja" title={titulo} aria-label={titulo}
             className="relative flex h-10 items-center gap-2 rounded-lg px-2 hover:bg-gray-100 dark:hover:bg-gray-800">
             <img src="/images/logo/tiempo.svg" alt="" className="w-6 h-6" />
-            <span className={`h-2.5 w-2.5 rounded-full ${turno ? "bg-green-500" : "bg-gray-300"}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${ajeno ? "bg-red-500" : turno ? "bg-green-500" : "bg-gray-300"}`} />
             <span className="hidden sm:inline text-sm text-gray-600">{turno ? <>Turno de <strong className="font-semibold text-gray-800">{turno.usuario_apertura}</strong></> : "Sin turno"}</span>
         </Link>
     );

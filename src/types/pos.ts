@@ -1,6 +1,7 @@
 // Tipos del punto de venta (Fase 3)
 
 import { PaginaInterface } from "./interfaces";
+import { AjusteReceta, GrupoModificadorInterface, IngredienteReceta, ItemOrdenInterface } from "./mesas";
 
 export interface ProductoPosInterface {
     id: number;
@@ -18,11 +19,16 @@ export interface ProductoPosInterface {
     area?: string | null;      // área de su comanda (null = comanda general)
     stock: number | null;
     bajo_minimo: boolean;
+    grupos?: number[];              // extras que se eligen al tocarlo (Leche, Endulzante)
+    receta?: IngredienteReceta[];   // lo que lleva: se puede quitar o aumentar sin cambiar el precio
 }
 
 export interface CatalogoPosInterface {
     productos: ProductoPosInterface[];
     categorias: { id: number; nombre: string }[];
+    grupos?: GrupoModificadorInterface[];
+    // false: no se agrega a la venta más de lo que hay en existencia
+    permitir_stock_negativo?: boolean;
     generado_at: string;
 }
 
@@ -33,10 +39,31 @@ export interface DescuentoInterface {
     valor: number;
 }
 
+// clave «p{id}» (o sin clave, en carritos guardados antes): el producto tal cual, tocarlo otra vez suma 1.
+// Con extras, ingredientes cambiados o nota la línea es única y su precio lleva los extras.
 export interface LineaCarritoInterface {
     producto: ProductoPosInterface;
     cantidad: number;
     descuento: DescuentoInterface | null;
+    clave?: string;
+    precio?: number;           // precio unitario con extras (si no, el del producto)
+    modificadores?: number[];
+    extras?: string[];         // nombres de los extras elegidos
+    ajustes?: AjusteReceta[];
+    notas?: string;
+}
+
+// Pedido de mostrador: la comanda ya salió a cocina o barra y se cobra cuando el cliente recoge
+export interface PedidoMostradorInterface {
+    orden_id: number;
+    ticket_id: number;
+    nombre: string;
+    total: number;
+    por_cobrar: number;
+    piezas: number;
+    creado_at: string | null;
+    usuario: string | null;
+    items: ItemOrdenInterface[];
 }
 
 export interface PagoFormInterface {
@@ -82,7 +109,7 @@ export interface VentaInterface {
     total: number;
     cambio: number;
     anticipo_aplicado?: number;
-    cliente?: { id: number; nombre: string; documento: string | null; telefono: string | null } | null;
+    cliente?: { id: number; nombre: string; documento: string | null; telefono: string | null; direccion?: string | null } | null;
     credito?: { monto: number; saldo: number; fecha_vencimiento: string; estado: string } | null;
     pedido?: { numero: string; tipo: "precuenta" | "especial" } | null;
     observaciones: string | null;

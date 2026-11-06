@@ -8,6 +8,7 @@ import {
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import { CategoriasInterface } from "../../types/interfaces";
+import { sinTildes } from "../../utils/texto";
 
 export function useCategorias() {
     const [data, setData] = useState<CategoriasInterface[]>([]);
@@ -89,7 +90,7 @@ export function useCategorias() {
     };
 
     const filteredData = data.filter((item) =>
-        item.nombre.toLowerCase().includes(filterText.toLowerCase())
+        sinTildes(item.nombre).includes(sinTildes(filterText))
     );
 
     return {

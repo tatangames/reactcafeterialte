@@ -8,6 +8,7 @@ import {
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import {UnidadMedidaFormInterface, UnidadMedidaInterface} from "../../types/interfaces.ts";
+import { sinTildes } from "../../utils/texto";
 
 
 
@@ -96,8 +97,8 @@ export function useUnidadMedida() {
     };
 
     const filteredData = data.filter((item) =>
-        item.nombre.toLowerCase().includes(filterText.toLowerCase()) ||
-        (item.abreviatura ?? "").toLowerCase().includes(filterText.toLowerCase())
+        sinTildes(item.nombre).includes(sinTildes(filterText)) ||
+        sinTildes(item.abreviatura ?? "").includes(sinTildes(filterText))
     );
 
     return {

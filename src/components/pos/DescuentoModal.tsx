@@ -65,7 +65,7 @@ export default function DescuentoModal({ isOpen, titulo, importe, actual, maximo
                     <p className="text-sm text-gray-500">− {dinero(monto)}</p>
                 </div>
                 {requiereAutorizacion && (
-                    <p className="text-xs text-amber-700">Supera el {maximoSinAutorizacion}% permitido: solo lo puede cobrar el administrador.</p>
+                    <p className="text-xs text-amber-700">Supera el {maximoSinAutorizacion}% permitido: al cobrar se pedirá el PIN o la contraseña del administrador.</p>
                 )}
 
                 <NumericKeypad size="md" onTecla={(t) => setValor((v) => aplicarTecla(v, t, 2))} />

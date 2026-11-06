@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-import { getUsuariosTable, crearUsuario, actualizarAdministrador } from "../../services/api";
+import { getUsuariosTable, crearUsuario, actualizarAdministrador, resetearPinUsuario } from "../../services/api";
+import { mensajeError } from "../../utils/formato";
 import { getToken } from "../../utils/auth";
+import { sinTildes } from "../../utils/texto";
 
 interface Usuario {
     id: number;
@@ -11,6 +13,7 @@ interface Usuario {
     rol: string;
     estado: boolean;
     ultimo_acceso: string | null;
+  pin_actualizado_at?: string | null;
 }
 
 interface NuevoUsuarioForm {
@@ -127,12 +130,27 @@ export function useUsuarios() {
 
     const filteredData = data.filter(
         (item) =>
-            item.nombre.toLowerCase().includes(filterText.toLowerCase()) ||
-            item.correo.toLowerCase().includes(filterText.toLowerCase()) ||
-            item.rol.toLowerCase().includes(filterText.toLowerCase())
+            sinTildes(item.nombre).includes(sinTildes(filterText)) ||
+            sinTildes(item.correo).includes(sinTildes(filterText)) ||
+            sinTildes(item.rol).includes(sinTildes(filterText))
     );
 
+    // Quien olvidó su PIN: se borra, entra con su contraseña y crea uno nuevo en "Mi cuenta"
+    const handleResetearPin = async (usuario: { id: number; nombre: string }) => {
+        if (!window.confirm(`¿Borrar el PIN de ${usuario.nombre}?
+
+Desbloqueará la pantalla con su contraseña y después podrá crear un PIN nuevo en "Mi cuenta y PIN".`)) return;
+        try {
+            const res = await resetearPinUsuario(usuario.id);
+            toast.success(res.message);
+            await fetchUsuarios();
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo borrar el PIN"));
+        }
+    };
+
     return {
+        handleResetearPin,
         // datos
         filteredData,
         loading,

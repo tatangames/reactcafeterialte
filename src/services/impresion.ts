@@ -39,8 +39,21 @@ export const reintentarTrabajo = async (id: number, impresoraId?: number): Promi
     return data;
 };
 
+// Quitar de la lista un error de impresión (o todos): no se vuelve a imprimir
+export const eliminarTrabajo = async (id: number) =>
+    (await api.delete(`/impresion/trabajos/${id}`)).data as { success: number; message: string };
+
+export const eliminarTrabajosConError = async () =>
+    (await api.delete("/impresion/trabajos")).data as { success: number; message: string };
+
 export const probarImpresora = async (id: number): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post(`/admin/impresora/${id}/test`);
+    return data;
+};
+
+// Ticket de producción de ejemplo (Mesa 1, Ice latte con extras) con el formato de cocina y barra
+export const probarProduccion = async (id: number): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post(`/admin/impresora/${id}/test-produccion`);
     return data;
 };
 

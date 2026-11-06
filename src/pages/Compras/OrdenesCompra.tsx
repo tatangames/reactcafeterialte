@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FechaInput from "../../components/form/FechaInput";
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -6,6 +7,7 @@ import PageHeader from '../../components/common/PageHeader';
 import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import FormField, { inputClass } from '../../components/form/FormField';
+import SelectBuscador from '../../components/form/SelectBuscador';
 import MotivoModal from '../../components/modal/MotivoModal';
 import LineasCompra, { LineaCompra, subtotalLinea } from '../../components/compras/LineasCompra';
 import { useAuth } from '../../context/AuthContext';
@@ -119,16 +121,15 @@ export default function OrdenesCompra() {
                         <h2 className="text-lg font-semibold">{editando === 'nueva' ? 'Nueva orden de compra' : `Editar orden ${editando.numero}`}</h2>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <FormField label="Proveedor" required>
-                                <select className={inputClass} value={form.proveedor_id} onChange={e => setForm(f => ({ ...f, proveedor_id: e.target.value }))}>
-                                    <option value="">Elegir...</option>
-                                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                                </select>
+                                <SelectBuscador value={form.proveedor_id ? Number(form.proveedor_id) : null}
+                                    onChange={v => setForm(f => ({ ...f, proveedor_id: v ? String(v) : '' }))}
+                                    placeholder="Buscar proveedor..." opciones={proveedores.map(p => ({ value: p.id, label: p.nombre }))} />
                             </FormField>
                             <FormField label="Fecha">
-                                <input type="date" className={inputClass} value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
+                                <FechaInput className={inputClass} value={form.fecha} onChange={(v) => setForm(f => ({ ...f, fecha: v }))} />
                             </FormField>
                             <FormField label="Entrega esperada">
-                                <input type="date" className={inputClass} value={form.fecha_esperada} min={form.fecha} onChange={e => setForm(f => ({ ...f, fecha_esperada: e.target.value }))} />
+                                <FechaInput className={inputClass} value={form.fecha_esperada} min={form.fecha} onChange={(v) => setForm(f => ({ ...f, fecha_esperada: v }))} />
                             </FormField>
                         </div>
                         <LineasCompra lineas={lineas} productos={productos} unidades={unidades} onChange={setLineas} />

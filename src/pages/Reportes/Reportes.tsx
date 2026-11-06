@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 
 import PageHeader from '../../components/common/PageHeader';
+import SelectBuscador from '../../components/form/SelectBuscador';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { inputClass } from '../../components/form/FormField';
 import { useAuth } from '../../context/AuthContext';
@@ -148,16 +149,18 @@ export default function Reportes() {
                     <div className="flex flex-wrap items-center gap-3">
                         {info?.fechas !== false && <DateRangeFilter desde={rango.desde} hasta={rango.hasta} onChange={setRango} />}
                         {tipo === 'kardex' && (
-                            <select className={`${inputClass} !w-auto min-w-[220px]`} value={extra.producto_id ?? ''} onChange={e => setExtra({ producto_id: e.target.value })}>
-                                <option value="">Elegir producto...</option>
-                                {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                            </select>
+                            <div className="w-64">
+                                <SelectBuscador value={extra.producto_id ? Number(extra.producto_id) : null} placeholder="Buscar producto..."
+                                    onChange={v => setExtra({ producto_id: v ? String(v) : '' })}
+                                    opciones={productos.map(p => ({ value: p.id, label: p.nombre }))} />
+                            </div>
                         )}
                         {tipo === 'compras' && (
-                            <select className={`${inputClass} !w-auto`} value={extra.proveedor_id ?? ''} onChange={e => setExtra({ proveedor_id: e.target.value })}>
-                                <option value="">Todos los proveedores</option>
-                                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                            </select>
+                            <div className="w-64">
+                                <SelectBuscador value={extra.proveedor_id ? Number(extra.proveedor_id) : 0} placeholder="Buscar proveedor..."
+                                    onChange={v => setExtra({ proveedor_id: v ? String(v) : '' })}
+                                    opciones={[{ value: 0, label: 'Todos los proveedores' }, ...proveedores.map(p => ({ value: p.id, label: p.nombre }))]} />
+                            </div>
                         )}
                         {tipo === 'gastos' && (
                             <select className={`${inputClass} !w-auto`} value={extra.categoria_id ?? ''} onChange={e => setExtra({ categoria_id: e.target.value })}>

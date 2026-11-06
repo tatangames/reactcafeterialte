@@ -6,7 +6,7 @@ import {
     actualizarImpresora,
     eliminarImpresora,
 } from "../../services/api";
-import { getTrabajosImpresion, probarImpresora, reintentarTrabajo } from "../../services/impresion";
+import { eliminarTrabajo, eliminarTrabajosConError, getTrabajosImpresion, probarImpresora, probarProduccion, reintentarTrabajo } from "../../services/impresion";
 import { getToken } from "../../utils/auth";
 import { mensajeError } from "../../utils/formato";
 import {
@@ -41,6 +41,7 @@ export function useImpresoras() {
 
     // Prueba de impresión: resultado por impresora
     const [probando, setProbando]                   = useState<number | null>(null);
+    const [probandoProduccion, setProbandoProduccion] = useState(false);
     const [resultadoPrueba, setResultadoPrueba]     = useState<Record<number, { ok: boolean; mensaje: string }>>({});
 
     // Trabajos que fallaron
@@ -136,10 +137,11 @@ export function useImpresoras() {
         }
     };
 
-    const handleProbar = async (id: number) => {
+    const handleProbar = async (id: number, produccion = false) => {
         setProbando(id);
+        setProbandoProduccion(produccion);
         try {
-            const res = await probarImpresora(id);
+            const res = await (produccion ? probarProduccion(id) : probarImpresora(id));
             setResultadoPrueba((r) => ({ ...r, [id]: { ok: true, mensaje: res.message } }));
             toast.success("Prueba enviada a la impresora");
         } catch (error) {
@@ -166,6 +168,31 @@ export function useImpresoras() {
         }
     };
 
+    const handleEliminarTrabajo = async (trabajo: TrabajoImpresionInterface) => {
+        setReintentando(trabajo.id);
+        try {
+            await eliminarTrabajo(trabajo.id);
+            setTrabajos((ts) => ts.filter((t) => t.id !== trabajo.id));
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo eliminar"));
+            fetchTrabajos();
+        } finally {
+            setReintentando(null);
+        }
+    };
+
+    const handleEliminarTodos = async () => {
+        if (!window.confirm(`¿Quitar los ${trabajos.length} errores de impresión de la lista? No se vuelven a imprimir.`)) return;
+        try {
+            const res = await eliminarTrabajosConError();
+            toast.success(res.message);
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo eliminar"));
+        } finally {
+            fetchTrabajos();
+        }
+    };
+
     return {
         data,
         loading,
@@ -180,10 +207,13 @@ export function useImpresoras() {
         handleGuardar,
         handleEliminar,
         probando,
+        probandoProduccion,
         resultadoPrueba,
         handleProbar,
         trabajos,
         reintentando,
         handleReintentar,
+        handleEliminarTrabajo,
+        handleEliminarTodos,
     };
 }

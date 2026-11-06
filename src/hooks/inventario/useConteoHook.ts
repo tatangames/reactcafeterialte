@@ -7,6 +7,7 @@ import { getStock, registrarConteo } from '../../services/inventario';
 import { getToken } from '../../utils/auth';
 import { hoyLocal, mensajeError } from '../../utils/formato';
 import { CategoriasInterface, InventarioStockInterface } from '../../types/interfaces';
+import { sinTildes } from '../../utils/texto';
 
 export interface LineaConteo {
     producto: InventarioStockInterface;
@@ -41,12 +42,12 @@ export function useConteoHook() {
     }, []);
 
     const categoriaNombre = categorias.find(c => String(c.id) === categoriaId)?.nombre;
-    const texto = buscar.toLowerCase();
+    const texto = sinTildes(buscar);
 
     const visibles = productos.filter(p =>
         (!clase || p.clase === clase) &&
         (!categoriaNombre || p.categorias.includes(categoriaNombre)) &&
-        (!texto || p.producto.toLowerCase().includes(texto) || (p.sku ?? '').toLowerCase().includes(texto))
+        (!texto || sinTildes(p.producto).includes(texto) || sinTildes(p.sku ?? '').includes(texto))
     );
 
     const setConteo = (productoId: number, valor: string) =>

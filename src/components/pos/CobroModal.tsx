@@ -72,9 +72,19 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
         return true;
     };
 
+    // Agrega esta parte y deja lo que falta para otra forma de pago
     const agregar = () => {
-        const valor = montoActual > 0 ? montoActual : restante;
-        if (valor <= 0 || !validarActual(valor)) return;
+        const valor = montoActual > 0 ? montoActual : metodo.afecta_efectivo ? 0 : restante;
+        if (valor <= 0) {
+            setError("Escribe el monto de esta parte");
+            return;
+        }
+        // Efectivo que cubre todo (o sobra) es el último pago: se cobra y se da cambio
+        if (metodo.afecta_efectivo && valor + 0.001 >= restante) {
+            setError("Con este efectivo ya se cubre lo que falta: toca «Cobrar»");
+            return;
+        }
+        if (!validarActual(valor)) return;
         setPagos((p) => [...p, pagoActual(valor)]);
         setMonto("");
         setReferencia("");
@@ -166,9 +176,9 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
                                     {(montoActual || restante) > cliente.credito_disponible + 0.001 ? ": supera el límite, se pedirá autorización" : ""}</p>
                             </div>
                         )}
-                        {hayCredito && !conCredito && (
+                        {hayCredito && !conCredito && cliente && (
                             <p className="text-xs text-gray-500">{!enLinea ? "La venta al crédito necesita conexión con el servidor"
-                                : cliente ? `${cliente.nombre} no tiene crédito autorizado` : "Para vender al crédito, asigna un cliente con crédito"}</p>
+                                : `${cliente.nombre} no tiene crédito autorizado`}</p>
                         )}
 
                         <div className="rounded-xl bg-white border border-gray-200 px-4 py-3 text-right">
@@ -184,19 +194,24 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
 
                         <NumericKeypad onTecla={(t) => setMonto((v) => aplicarTecla(v, t, 2))} />
 
+                        {/* Varias formas de pago: cada parte se agrega y la última se cobra con «Cobrar» */}
+                        <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                            <p className="text-sm font-semibold text-gray-800">¿Paga con varias formas?</p>
+                            <p className="text-xs text-gray-500">Elige la forma, escribe el monto de esa parte y toca «Agregar pago». Repite con la siguiente; la última se cobra con «Cobrar».</p>
+                            <button type="button" onClick={agregar} disabled={isLoading || restante <= 0}
+                                className="w-full py-3 rounded-xl bg-white border border-blue-600 text-blue-700 font-semibold hover:bg-blue-50 disabled:opacity-40">
+                                {restante <= 0 ? "Total cubierto" : `Agregar pago${(montoActual > 0 || !metodo.afecta_efectivo) ? `: ${metodo.nombre} ${dinero(montoActual > 0 ? montoActual : restante)}` : ""}`}
+                            </button>
+                        </div>
+
                         {error && <p className="text-sm text-red-600">{error}</p>}
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={onCancel} disabled={isLoading}
                                 className="py-4 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300">Volver</button>
-                            <button type="button" onClick={agregar} disabled={isLoading || restante <= 0}
-                                className="py-4 rounded-xl bg-white border border-blue-600 text-blue-700 font-semibold hover:bg-blue-50 disabled:opacity-40"
-                                title="Para pagar con varias formas">
-                                + Pago
-                            </button>
                             <button type="button" onClick={() => cobrar()} disabled={isLoading}
                                 className="py-4 rounded-xl bg-blue-600 text-white text-lg font-bold hover:bg-blue-700 disabled:opacity-50">
-                                {isLoading ? "..." : "Cobrar"}
+                                {isLoading ? "..." : cubierto + 0.001 < total ? `Cobrar (faltan ${dinero(total - cubierto)})` : `Cobrar ${dinero(total)}`}
                             </button>
                         </div>
                     </div>

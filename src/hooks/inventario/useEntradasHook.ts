@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { getInventarioEntradas } from '../../services/api';
 import { getToken } from '../../utils/auth';
 import { EntradaInventarioInterface } from '../../types/interfaces';
+import { sinTildes } from '../../utils/texto';
 
 export function useEntradasHook() {
     const [data, setData] = useState<EntradaInventarioInterface[]>([]);
@@ -39,7 +40,7 @@ export function useEntradasHook() {
     };
 
     const filteredData = data.filter(item =>
-        (item.descripcion ?? '').toLowerCase().includes(filterText.toLowerCase()) ||
+        sinTildes(item.descripcion ?? '').includes(sinTildes(filterText)) ||
         item.fecha.includes(filterText)
     );
 

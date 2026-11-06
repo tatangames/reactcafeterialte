@@ -63,9 +63,25 @@ export default function ConfiguracionNegocio() {
                                     <input type="text" value={form.nombre} maxLength={200}
                                         onChange={(e) => handleChange("nombre", e.target.value)} className={inputClass} />
                                 </FormField>
-                                <FormField label="Razón social">
-                                    <input type="text" value={form.razon_social} maxLength={200}
+                                <FormField label="Razón social (sale grande arriba del recibo)">
+                                    <input type="text" value={form.razon_social} maxLength={200} placeholder="FLAVIOS SAS DE CV"
                                         onChange={(e) => handleChange("razon_social", e.target.value)} className={inputClass} />
+                                </FormField>
+                                <FormField label="NIT">
+                                    <input type="text" value={form.nit} maxLength={30}
+                                        onChange={(e) => handleChange("nit", e.target.value)} className={inputClass} />
+                                </FormField>
+                                <FormField label="NRC">
+                                    <input type="text" value={form.nrc} maxLength={30}
+                                        onChange={(e) => handleChange("nrc", e.target.value)} className={inputClass} />
+                                </FormField>
+                                <FormField label="Actividad económica">
+                                    <input type="text" value={form.actividad_economica} maxLength={200} placeholder="Elaboración de productos de panadería"
+                                        onChange={(e) => handleChange("actividad_economica", e.target.value)} className={inputClass} />
+                                </FormField>
+                                <FormField label="Tipo de establecimiento">
+                                    <input type="text" value={form.tipo_establecimiento} maxLength={100} placeholder="Sucursal / Agencia"
+                                        onChange={(e) => handleChange("tipo_establecimiento", e.target.value)} className={inputClass} />
                                 </FormField>
                                 <FormField label="Teléfono">
                                     <input type="tel" value={form.telefono} maxLength={30}

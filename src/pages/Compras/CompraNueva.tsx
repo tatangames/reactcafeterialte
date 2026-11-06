@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import FechaInput from "../../components/form/FechaInput";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 import PageHeader from '../../components/common/PageHeader';
 import FormField, { inputClass } from '../../components/form/FormField';
 import MoneyInput from '../../components/form/MoneyInput';
+import SelectBuscador from '../../components/form/SelectBuscador';
 import LineasCompra, { LineaCompra, subtotalLinea } from '../../components/compras/LineasCompra';
 import { useAuth } from '../../context/AuthContext';
 import { useCaja } from '../../context/CajaContext';
@@ -41,7 +43,6 @@ export default function CompraNueva() {
     const [numeroDocumento, setNumeroDocumento] = useState('');
     const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
     const [vence, setVence] = useState('');
-    const [impuesto, setImpuesto] = useState('');
     const [observaciones, setObservaciones] = useState('');
     const [lineas, setLineas] = useState<LineaCompra[]>([]);
     const [origenPago, setOrigenPago] = useState<'caja' | 'externo'>('caja');
@@ -94,14 +95,19 @@ export default function CompraNueva() {
     }, [turnoAbierto, catalogos]);
 
     const subtotal = useMemo(() => Math.round(lineas.reduce((s, l) => s + subtotalLinea(l), 0) * 100) / 100, [lineas]);
-    const iva = Number(impuesto || 0);
-    const total = Math.round((subtotal + iva) * 100) / 100;
+    // El negocio no maneja IVA: el total de la compra es la suma de las líneas
+    const total = subtotal;
     const metodo = metodos.find(m => m.id === metodoId);
+    // Total impreso en la factura del proveedor: si no cuadra con lo digitado, algo está mal
+    const [totalFactura, setTotalFactura] = useState('');
+    const factura = totalFactura.trim() === '' ? null : Number(totalFactura);
+    const diferencia = factura === null ? 0 : Math.round((total - factura) * 100) / 100;
 
     const errores: string[] = [];
     if (!proveedorId) errores.push('Elige el proveedor');
     if (lineas.length === 0) errores.push('Agrega al menos un producto');
-    if (lineas.some(l => Number(l.cantidad || 0) <= 0)) errores.push('Revisa las cantidades');
+    if (lineas.some(l => Number(l.cantidad || 0) <= 0)) errores.push('Falta la cantidad de algún producto (marcada en rojo)');
+    if (diferencia !== 0) errores.push(`El total no cuadra con la factura: diferencia de ${dinero(Math.abs(diferencia))}. Revisa cantidades y costos.`);
     if (condicion === 'contado' && origenPago === 'caja' && !turnoAbierto) errores.push('Abre el turno de caja o marca el pago como fuera de caja');
     if (condicion === 'contado' && metodo?.requiere_referencia && !referencia.trim()) errores.push(`${metodo.nombre} requiere referencia`);
 
@@ -113,7 +119,7 @@ export default function CompraNueva() {
                 uuid, proveedor_id: proveedorId, orden_compra_id: orden?.id ?? null,
                 fecha, tipo_documento: tipoDocumento, numero_documento: numeroDocumento.trim() || undefined,
                 condicion, fecha_vencimiento: condicion === 'credito' ? vence || null : null,
-                impuesto: iva, observaciones: observaciones.trim() || undefined,
+                impuesto: 0, observaciones: observaciones.trim() || undefined,
                 items: lineas.map(l => ({
                     producto_id: l.producto_id, unidad_medida_id: l.unidad_medida_id, cantidad: Number(l.cantidad),
                     costo_unitario: Number(l.costo_unitario || 0), orden_detalle_id: l.orden_detalle_id ?? null,
@@ -142,14 +148,11 @@ export default function CompraNueva() {
                     <div className="rounded-xl border border-gray-200 bg-white p-5">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <FormField label="Proveedor" required>
-                                <select className={inputClass} value={proveedorId ?? ''} disabled={!!orden}
-                                    onChange={e => setProveedorId(e.target.value ? Number(e.target.value) : null)}>
-                                    <option value="">Elegir...</option>
-                                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                                </select>
+                                <SelectBuscador value={proveedorId} disabled={!!orden} onChange={setProveedorId}
+                                    placeholder="Buscar proveedor..." opciones={proveedores.map(p => ({ value: p.id, label: p.nombre }))} />
                             </FormField>
                             <FormField label="Fecha" required>
-                                <input type="date" className={inputClass} value={fecha} max={hoyLocal()} onChange={e => setFecha(e.target.value)} />
+                                <FechaInput className={inputClass} value={fecha} max={hoyLocal()} onChange={(v) => setFecha(v)} />
                             </FormField>
                             <FormField label="Documento">
                                 <select className={inputClass} value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value as TipoDocumentoCompra)}>
@@ -177,16 +180,14 @@ export default function CompraNueva() {
                 <div className="space-y-4">
                     <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
                         <div className="space-y-1 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{dinero(subtotal)}</span></div>
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="text-gray-500">IVA del documento</span>
-                                <MoneyInput prefix="$" value={impuesto} onChange={setImpuesto} className="max-w-[130px]" />
-                            </div>
-                            {tipoDocumento === 'ccf' && subtotal > 0 && !impuesto && (
-                                <button type="button" onClick={() => setImpuesto(String(Math.round(subtotal * 13) / 100))}
-                                    className="text-xs text-blue-600 hover:underline">Calcular 13%: {dinero(subtotal * 0.13)}</button>
-                            )}
                             <div className="flex items-end justify-between pt-2"><span className="text-gray-700">Total</span><span className="text-3xl font-bold">{dinero(total)}</span></div>
+                            <div className="flex items-center justify-between gap-3 pt-2">
+                                <span className="text-gray-500">Total de la factura<br /><span className="text-xs">para comparar (opcional)</span></span>
+                                <MoneyInput prefix="$" value={totalFactura} onChange={setTotalFactura} className="max-w-[140px]" />
+                            </div>
+                            {factura !== null && (diferencia === 0
+                                ? <p className="text-xs font-medium text-green-700">✓ Cuadra con la factura</p>
+                                : <p className="text-xs font-medium text-red-600">No cuadra: {diferencia > 0 ? 'digitaste' : 'faltan'} {dinero(Math.abs(diferencia))} {diferencia > 0 ? 'de más' : ''}</p>)}
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
@@ -200,7 +201,7 @@ export default function CompraNueva() {
 
                         {condicion === 'credito' ? (
                             <FormField label="Vence" hint={proveedor ? `Plazo del proveedor: ${proveedor.dias_credito} días` : undefined}>
-                                <input type="date" className={inputClass} value={vence} min={fecha} onChange={e => setVence(e.target.value)} />
+                                <FechaInput className={inputClass} value={vence} min={fecha} onChange={(v) => setVence(v)} />
                             </FormField>
                         ) : (
                             <div className="space-y-3">

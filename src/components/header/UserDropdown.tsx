@@ -2,9 +2,11 @@ import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router";
+import { useAuth } from "../../context/AuthContext";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -23,7 +25,7 @@ export default function UserDropdown() {
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
           <img src="/images/user/owner.jpg" alt="User" />
         </span>
-          <span className="block mr-1 font-medium text-theme-sm">Musharof1</span>
+          <span className="block mr-1 font-medium text-theme-sm">{user?.nombre ?? ""}</span>
           <svg
               className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
                   isOpen ? "rotate-180" : ""
@@ -51,10 +53,10 @@ export default function UserDropdown() {
         >
           <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Musharof Chowdhury
+            {user?.nombre}
           </span>
             <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            randomuser@pimjo.com
+            {user?.email}
           </span>
           </div>
 
@@ -63,7 +65,7 @@ export default function UserDropdown() {
               <DropdownItem
                   onItemClick={closeDropdown}
                   tag="a"
-                  to="/profile"
+                  to="/mi-cuenta"
                   className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
               >
                 <img
@@ -71,7 +73,7 @@ export default function UserDropdown() {
                     alt="Tiempo"
                     className="w-6 h-6"
                 />
-                Mi perfil
+                Mi cuenta y PIN
               </DropdownItem>
             </li>
           </ul>

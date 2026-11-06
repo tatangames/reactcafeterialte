@@ -6,10 +6,12 @@ import PageHeader from '../../components/common/PageHeader';
 import StatusBadge from '../../components/common/StatusBadge';
 import FormField, { inputClass } from '../../components/form/FormField';
 import MoneyInput from '../../components/form/MoneyInput';
+import SelectBuscador from '../../components/form/SelectBuscador';
 import { useAuth } from '../../context/AuthContext';
 import { activarReceta, getCatalogoProduccion, getReceta, getRecetas, guardarReceta } from '../../services/produccion';
 import { cantidad, dinero, mensajeError } from '../../utils/formato';
 import { CatalogoProduccionInterface, RecetaInterface } from '../../types/produccion';
+import { sinTildes } from '../../utils/texto';
 
 interface LineaReceta { clave: string; producto_id: number; unidad_medida_id: number | null; cantidad: string; merma: string }
 
@@ -23,6 +25,9 @@ export default function Recetas() {
     const [recetas, setRecetas] = useState<RecetaInterface[] | null>(null);
     const [catalogo, setCatalogo] = useState<CatalogoProduccionInterface | null>(null);
     const [buscar, setBuscar] = useState('');
+    // '' = todas; venta = se descuenta al vender; produccion = se hornea por tandas
+    const [uso, setUso] = useState<'' | 'venta' | 'produccion'>('');
+    const visibles = useMemo(() => recetas?.filter(r => !uso || (uso === 'venta' ? r.uso === 'venta' : r.uso !== 'venta')) ?? null, [recetas, uso]);
     const [detalle, setDetalle] = useState<RecetaInterface | null>(null);
 
     // Editor
@@ -76,9 +81,9 @@ export default function Recetas() {
     // Lo que no lleva existencia propia no se produce: su receta se descuenta al venderlo
     const deVenta = !!producto && !producto.controla_stock;
     const insumosSugeridos = useMemo(() => {
-        const t = busquedaInsumo.trim().toLowerCase();
+        const t = sinTildes(busquedaInsumo.trim());
         if (!t) return [];
-        return productos.filter(p => p.id !== productoId && p.nombre.toLowerCase().includes(t) && (!deVenta || p.controla_stock)).slice(0, 8);
+        return productos.filter(p => p.id !== productoId && sinTildes(p.nombre).includes(t) && (!deVenta || p.controla_stock)).slice(0, 8);
     }, [busquedaInsumo, productos, productoId, deVenta]);
 
     const guardar = async () => {
@@ -126,13 +131,9 @@ export default function Recetas() {
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <FormField label="Producto" required>
-                                <select className={inputClass} value={productoId ?? ''} disabled={editando !== 'nueva'}
-                                    onChange={e => setProductoId(e.target.value ? Number(e.target.value) : null)}>
-                                    <option value="">Elegir...</option>
-                                    {productos.filter(p => p.clase !== 'materia_prima' && (editando !== 'nueva' || !conReceta.has(p.id))).map(p => (
-                                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                                    ))}
-                                </select>
+                                <SelectBuscador value={productoId} disabled={editando !== 'nueva'} onChange={setProductoId}
+                                    placeholder="Escribí para buscar..."
+                                    opciones={productos.filter(p => p.clase !== 'materia_prima' && (editando !== 'nueva' || !conReceta.has(p.id))).map(p => ({ value: p.id, label: p.nombre }))} />
                             </FormField>
                             <FormField label={`Rendimiento${producto?.unidad ? ` (${producto.unidad})` : ''}`} required
                                 hint={deVenta ? 'Para cuántas unidades vendidas alcanzan los ingredientes (normalmente 1)' : 'Cuánto sale de una tanda'}>
@@ -293,7 +294,17 @@ export default function Recetas() {
             <PageHeader title="Recetas" subtitle="Ingredientes por tanda y costo con el precio promedio de hoy"
                 actions={puedeEditar && <button type="button" onClick={() => editar(null)} className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">+ Nueva receta</button>} />
 
-            <input className={`${inputClass} mb-4 max-w-sm`} placeholder="Buscar receta o producto" value={buscar} onChange={e => setBuscar(e.target.value)} />
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+                <input className={`${inputClass} max-w-sm`} placeholder="Buscar receta o producto" value={buscar} onChange={e => setBuscar(e.target.value)} />
+                <div className="flex flex-wrap gap-2">
+                    {([['', 'Todas'], ['venta', 'Se descuentan al vender'], ['produccion', 'Producción']] as const).map(([valor, texto]) => (
+                        <button key={valor} type="button" onClick={() => setUso(valor)}
+                            className={`h-[42px] rounded-lg px-4 text-sm font-medium ${uso === valor ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                            {texto}{recetas ? ` (${recetas.filter(r => !valor || (valor === 'venta' ? r.uso === 'venta' : r.uso !== 'venta')).length})` : ''}
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                 <table className="w-full text-sm">
@@ -303,8 +314,8 @@ export default function Recetas() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {!recetas && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>}
-                        {recetas?.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No hay recetas</td></tr>}
-                        {recetas?.map(r => (
+                        {visibles?.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No hay recetas</td></tr>}
+                        {visibles?.map(r => (
                             <tr key={r.id} onClick={() => abrir(r.id)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-3"><p className="font-medium">{r.producto}</p><p className="text-xs text-gray-500">v{r.version} · {r.uso === 'venta' ? 'se descuenta al vender' : 'producción'}</p></td>
                                 <td className="px-4 py-3 text-right">{cantidad(r.rendimiento, r.unidad)}</td>

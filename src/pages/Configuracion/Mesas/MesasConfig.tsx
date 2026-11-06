@@ -8,12 +8,13 @@ import MoneyInput from '../../../components/form/MoneyInput';
 import { useCaja } from '../../../context/CajaContext';
 import {
     AreaConfigInterface, asignarCategorias, getAreasConfig, getGruposConfig, getTerminalesConfig, GrupoConfigInterface, guardarArea, guardarGrupo,
-    guardarTerminal, TerminalConfigInterface,
+    guardarTerminal, InsumoModificadorInterface, ordenarTerminales, TerminalConfigInterface, UnidadModificadorInterface,
 } from '../../../services/mesas';
 import { dinero, mensajeError } from '../../../utils/formato';
+import { sinTildes } from '../../../utils/texto';
 
 type Pestana = 'terminales' | 'areas' | 'modificadores';
-const TIPOS = { mesa: 'Mesa', caja: 'Caja de mostrador', llevar: 'Para llevar' };
+const TIPOS = { mesa: 'Mesa', caja: 'Caja de mostrador' };
 
 function Ventana({ titulo, children, onCerrar, onGuardar, guardando, ancho = 'max-w-md' }: {
     titulo: string; children: React.ReactNode; onCerrar: () => void; onGuardar: () => void; guardando: boolean; ancho?: string;
@@ -34,6 +35,10 @@ function Ventana({ titulo, children, onCerrar, onGuardar, guardando, ancho = 'ma
     );
 }
 
+// Una opción del formulario: el insumo es opcional (Revueltos no gasta nada; Fresa gasta 30 g)
+type OpcionForm = { id?: number; nombre: string; precio: string; producto_id: string; cantidad: string; unidad_medida_id: string };
+const opcionVacia = (): OpcionForm => ({ nombre: '', precio: '', producto_id: '', cantidad: '', unidad_medida_id: '' });
+
 export default function MesasConfig() {
     const { catalogos } = useCaja();
     const [pestana, setPestana] = useState<Pestana>('terminales');
@@ -43,6 +48,7 @@ export default function MesasConfig() {
     const [terminales, setTerminales] = useState<TerminalConfigInterface[]>([]);
     const [zonas, setZonas] = useState<string[]>([]);
     const [terminal, setTerminal] = useState<Partial<TerminalConfigInterface> | null>(null);
+    const [arrastrando, setArrastrando] = useState<number | null>(null);
 
     // Áreas
     const [areas, setAreas] = useState<AreaConfigInterface[]>([]);
@@ -53,16 +59,18 @@ export default function MesasConfig() {
     // Modificadores
     const [grupos, setGrupos] = useState<GrupoConfigInterface[]>([]);
     const [productos, setProductos] = useState<{ id: number; nombre: string }[]>([]);
+    const [insumos, setInsumos] = useState<InsumoModificadorInterface[]>([]);
+    const [unidades, setUnidades] = useState<UnidadModificadorInterface[]>([]);
     const [grupo, setGrupo] = useState<{
         id?: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
-        opciones: { id?: number; nombre: string; precio: string }[]; productos: number[];
+        opciones: OpcionForm[]; productos: number[];
     } | null>(null);
     const [buscarProducto, setBuscarProducto] = useState('');
 
     const cargar = useCallback(() => {
         getTerminalesConfig().then(r => { setTerminales(r.terminales); setZonas(r.zonas); }).catch(e => toast.error(mensajeError(e, 'Error al cargar terminales')));
         getAreasConfig().then(r => { setAreas(r.areas); setImpresoras(r.impresoras); setCategorias(r.categorias); }).catch(() => null);
-        getGruposConfig().then(r => { setGrupos(r.grupos); setProductos(r.productos); }).catch(() => null);
+        getGruposConfig().then(r => { setGrupos(r.grupos); setProductos(r.productos); setInsumos(r.insumos); setUnidades(r.unidades); }).catch(() => null);
     }, []);
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -80,6 +88,30 @@ export default function MesasConfig() {
         }
     };
 
+    // Mientras se arrastra, la fila se mueve en la tabla; al soltar se guarda la nueva posición
+    const moverTerminal = (sobre: number) => {
+        if (arrastrando === null || arrastrando === sobre) return;
+        setTerminales(ts => {
+            const desde = ts.findIndex(t => t.id === arrastrando);
+            const hasta = ts.findIndex(t => t.id === sobre);
+            const copia = [...ts];
+            copia.splice(hasta, 0, ...copia.splice(desde, 1));
+            return copia;
+        });
+    };
+
+    const soltarTerminal = async () => {
+        if (arrastrando === null) return;
+        setArrastrando(null);
+        try {
+            await ordenarTerminales(terminales.map(t => t.id));
+            setTerminales(ts => ts.map((t, n) => ({ ...t, orden: n + 1 })));
+        } catch (e) {
+            toast.error(mensajeError(e, 'No se pudo guardar el orden'));
+            cargar();
+        }
+    };
+
     return (
         <div className="p-6">
             <PageHeader title="Mesas y cocina" subtitle="Terminales del mapa, áreas de preparación y extras de los productos" />
@@ -94,18 +126,27 @@ export default function MesasConfig() {
             {/* ── Terminales ── */}
             {pestana === 'terminales' && (
                 <>
-                    <button type="button" onClick={() => setTerminal({ nombre: '', tipo: 'mesa', zona: zonas[0] ?? 'Salón', capacidad: 4, orden: terminales.length + 1, activo: true })}
-                        className="mb-3 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nueva terminal</button>
+                    <div className="mb-3 flex flex-wrap items-center gap-3">
+                        <button type="button" onClick={() => setTerminal({ nombre: '', tipo: 'mesa', zona: zonas[0] ?? 'Salón', capacidad: 4, activo: true })}
+                            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nueva terminal</button>
+                        <p className="text-sm text-gray-500">Arrastra las filas para cambiar el orden en que salen en el mapa.</p>
+                    </div>
                     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                                <tr><th className="px-4 py-3">Orden</th><th className="px-4 py-3">Nombre</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Zona</th>
+                                <tr><th className="w-10 px-2 py-3" /><th className="px-4 py-3">Posición</th><th className="px-4 py-3">Nombre</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Zona</th>
                                     <th className="px-4 py-3 text-right">Personas</th><th className="px-4 py-3">Estado</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {terminales.map(t => (
-                                    <tr key={t.id} onClick={() => setTerminal(t)} className="cursor-pointer hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-gray-500">{t.orden}</td>
+                                {terminales.map((t, n) => (
+                                    <tr key={t.id} onClick={() => setTerminal(t)} draggable
+                                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(t.id); }}
+                                        onDragOver={e => { e.preventDefault(); moverTerminal(t.id); }}
+                                        onDrop={e => e.preventDefault()}
+                                        onDragEnd={soltarTerminal}
+                                        className={`cursor-pointer hover:bg-gray-50 ${arrastrando === t.id ? 'bg-blue-50 opacity-60' : ''}`}>
+                                        <td className="cursor-grab px-2 py-3 text-center text-gray-400 active:cursor-grabbing" title="Arrastrar para mover">⠿</td>
+                                        <td className="px-4 py-3 text-gray-500">{n + 1}</td>
                                         <td className="px-4 py-3 font-medium">{t.nombre}</td>
                                         <td className="px-4 py-3">{TIPOS[t.tipo]}{t.caja ? ` · ${t.caja}` : ''}</td>
                                         <td className="px-4 py-3">{t.zona ?? '—'}</td>
@@ -125,7 +166,7 @@ export default function MesasConfig() {
                 <Ventana titulo={terminal.id ? `Editar ${terminal.nombre}` : 'Nueva terminal'} guardando={guardando} onCerrar={() => setTerminal(null)}
                     onGuardar={() => guardar(() => guardarTerminal({
                         nombre: terminal.nombre?.trim(), tipo: terminal.tipo, zona: terminal.zona || null, capacidad: Number(terminal.capacidad ?? 0),
-                        orden: Number(terminal.orden ?? 0), caja_id: terminal.tipo === 'caja' ? terminal.caja_id ?? catalogos?.cajas[0]?.id ?? null : null, activo: terminal.activo,
+                        caja_id: terminal.tipo === 'caja' ? terminal.caja_id ?? catalogos?.cajas[0]?.id ?? null : null, activo: terminal.activo,
                     }, terminal.id), () => setTerminal(null))}>
                     <FormField label="Nombre" required>
                         <input className={inputClass} value={terminal.nombre ?? ''} maxLength={60} autoFocus onChange={e => setTerminal(t => t && { ...t, nombre: e.target.value })} />
@@ -142,16 +183,13 @@ export default function MesasConfig() {
                             </select>
                         </FormField>
                     )}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         <FormField label="Zona">
                             <input className={inputClass} list="zonas" value={terminal.zona ?? ''} maxLength={60} onChange={e => setTerminal(t => t && { ...t, zona: e.target.value })} />
                             <datalist id="zonas">{zonas.map(z => <option key={z} value={z} />)}</datalist>
                         </FormField>
                         <FormField label="Personas">
                             <MoneyInput decimals={0} placeholder="4" value={String(terminal.capacidad ?? '')} onChange={v => setTerminal(t => t && { ...t, capacidad: Number(v || 0) })} />
-                        </FormField>
-                        <FormField label="Orden">
-                            <MoneyInput decimals={0} placeholder="1" value={String(terminal.orden ?? '')} onChange={v => setTerminal(t => t && { ...t, orden: Number(v || 0) })} />
                         </FormField>
                     </div>
                     <label className="flex items-center gap-2 text-sm">
@@ -239,14 +277,18 @@ export default function MesasConfig() {
             {/* ── Modificadores ── */}
             {pestana === 'modificadores' && (
                 <>
-                    <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, multiple: false, activo: true, opciones: [{ nombre: '', precio: '' }], productos: [] })}
+                    <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, multiple: false, activo: true, opciones: [opcionVacia()], productos: [] })}
                         className="mb-3 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nuevo grupo</button>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {grupos.length === 0 && <p className="text-sm text-gray-500">Aún no hay modificadores. Crea grupos como «Leche», «Saborizante» o «Tamaño».</p>}
                         {grupos.map(g => (
                             <button key={g.id} type="button" onClick={() => setGrupo({
                                 id: g.id, nombre: g.nombre, obligatorio: g.obligatorio, multiple: g.multiple, activo: g.activo,
-                                opciones: g.opciones.filter(o => o.activo).map(o => ({ id: o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '' })),
+                                opciones: g.opciones.filter(o => o.activo).map(o => ({
+                                    id: o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '',
+                                    producto_id: o.producto_id ? String(o.producto_id) : '', cantidad: o.cantidad ? String(o.cantidad) : '',
+                                    unidad_medida_id: o.unidad_medida_id ? String(o.unidad_medida_id) : '',
+                                })),
                                 productos: g.productos.map(p => p.id),
                             })} className="rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm">
                                 <div className="flex items-center justify-between">
@@ -255,6 +297,9 @@ export default function MesasConfig() {
                                 </div>
                                 <p className="text-xs text-gray-500">{g.obligatorio ? 'Obligatorio' : 'Opcional'} · {g.multiple ? 'varias opciones' : 'una opción'}</p>
                                 <p className="mt-2 text-sm text-gray-700">{g.opciones.filter(o => o.activo).map(o => o.precio > 0 ? `${o.nombre} (+${dinero(o.precio)})` : o.nombre).join(', ')}</p>
+                                {g.opciones.some(o => o.activo && o.insumo) && (
+                                    <p className="mt-1 text-xs text-gray-500">Descuenta: {g.opciones.filter(o => o.activo && o.insumo).map(o => `${o.insumo} ${o.cantidad} ${o.unidad ?? ''}`.trim()).join(' · ')}</p>
+                                )}
                                 <p className="mt-1 text-xs text-gray-500">{g.productos.length} producto(s)</p>
                             </button>
                         ))}
@@ -266,7 +311,12 @@ export default function MesasConfig() {
                 <Ventana titulo={grupo.id ? `Editar ${grupo.nombre}` : 'Nuevo grupo de modificadores'} ancho="max-w-2xl" guardando={guardando} onCerrar={() => setGrupo(null)}
                     onGuardar={() => guardar(() => guardarGrupo({
                         nombre: grupo.nombre.trim(), obligatorio: grupo.obligatorio, multiple: grupo.multiple, activo: grupo.activo,
-                        opciones: grupo.opciones.filter(o => o.nombre.trim()).map(o => ({ id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0) })),
+                        opciones: grupo.opciones.filter(o => o.nombre.trim()).map(o => ({
+                            id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0),
+                            producto_id: o.producto_id ? Number(o.producto_id) : null,
+                            cantidad: o.producto_id ? Number(o.cantidad || 0) : null,
+                            unidad_medida_id: o.producto_id && o.unidad_medida_id ? Number(o.unidad_medida_id) : null,
+                        })),
                         productos: grupo.productos,
                     }, grupo.id), () => setGrupo(null))}>
                     <FormField label="Nombre" required>
@@ -277,26 +327,53 @@ export default function MesasConfig() {
                         <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={grupo.multiple} onChange={e => setGrupo(g => g && { ...g, multiple: e.target.checked })} /> Se pueden elegir varias</label>
                         <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={grupo.activo} onChange={e => setGrupo(g => g && { ...g, activo: e.target.checked })} /> Activo</label>
                     </div>
-                    <FormField label="Opciones" required hint="Precio extra en blanco: no cambia el precio">
-                        <div className="space-y-2">
-                            {grupo.opciones.map((o, n) => (
-                                <div key={n} className="flex gap-2">
-                                    <input className={inputClass} value={o.nombre} maxLength={80} placeholder="Ej.: Deslactosada"
-                                        onChange={e => setGrupo(g => g && { ...g, opciones: g.opciones.map((x, i) => i === n ? { ...x, nombre: e.target.value } : x) })} />
-                                    <MoneyInput prefix="+$" className="!w-32 shrink-0" value={o.precio}
-                                        onChange={v => setGrupo(g => g && { ...g, opciones: g.opciones.map((x, i) => i === n ? { ...x, precio: v } : x) })} />
-                                    <button type="button" onClick={() => setGrupo(g => g && { ...g, opciones: g.opciones.filter((_, i) => i !== n) })}
-                                        className="h-[42px] w-10 shrink-0 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Quitar opción">✕</button>
-                                </div>
-                            ))}
-                            <button type="button" onClick={() => setGrupo(g => g && { ...g, opciones: [...g.opciones, { nombre: '', precio: '' }] })}
+                    <FormField label="Opciones" required hint="Precio extra en blanco: no cambia el precio. Insumo: lo que se descuenta del inventario por cada producto vendido con esa opción.">
+                        <div className="space-y-3">
+                            {grupo.opciones.map((o, n) => {
+                                const cambiar = (c: Partial<OpcionForm>) => setGrupo(g => g && { ...g, opciones: g.opciones.map((x, i) => i === n ? { ...x, ...c } : x) });
+                                const insumo = insumos.find(i => String(i.id) === o.producto_id);
+                                return (
+                                    <div key={n} className="space-y-2 rounded-lg border border-gray-200 p-2">
+                                        <div className="flex gap-2">
+                                            <input className={inputClass} value={o.nombre} maxLength={80} placeholder="Ej.: Deslactosada"
+                                                onChange={e => cambiar({ nombre: e.target.value })} />
+                                            <MoneyInput prefix="+$" className="!w-32 shrink-0" value={o.precio} onChange={v => cambiar({ precio: v })} />
+                                            <button type="button" onClick={() => setGrupo(g => g && { ...g, opciones: g.opciones.filter((_, i) => i !== n) })}
+                                                className="h-[42px] w-10 shrink-0 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Quitar opción">✕</button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                                            <select className={inputClass} value={o.producto_id} aria-label="Insumo que descuenta"
+                                                onChange={e => {
+                                                    const elegido = insumos.find(i => String(i.id) === e.target.value);
+                                                    cambiar({ producto_id: e.target.value, unidad_medida_id: elegido?.unidad_medida_id ? String(elegido.unidad_medida_id) : '' });
+                                                }}>
+                                                <option value="">No descuenta inventario</option>
+                                                {insumos.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                                            </select>
+                                            {o.producto_id && (
+                                                <>
+                                                    <input type="number" min="0" step="any" inputMode="decimal" className={`${inputClass} !w-28 shrink-0`} placeholder="Cantidad"
+                                                        value={o.cantidad} onChange={e => cambiar({ cantidad: e.target.value })} aria-label="Cantidad del insumo" />
+                                                    <select className={`${inputClass} !w-36 shrink-0`} value={o.unidad_medida_id} aria-label="Unidad del insumo"
+                                                        onChange={e => cambiar({ unidad_medida_id: e.target.value })}>
+                                                        {unidades.filter(u => !insumo?.tipo || u.tipo === insumo.tipo).map(u => (
+                                                            <option key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</option>
+                                                        ))}
+                                                    </select>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            <button type="button" onClick={() => setGrupo(g => g && { ...g, opciones: [...g.opciones, opcionVacia()] })}
                                 className="text-sm font-medium text-blue-600 hover:underline">+ Agregar opción</button>
                         </div>
                     </FormField>
                     <FormField label={`Productos que lo usan (${grupo.productos.length})`}>
                         <input className={`${inputClass} mb-2`} value={buscarProducto} onChange={e => setBuscarProducto(e.target.value)} placeholder="Buscar producto" />
                         <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
-                            {productos.filter(p => p.nombre.toLowerCase().includes(buscarProducto.trim().toLowerCase())).map(p => (
+                            {productos.filter(p => sinTildes(p.nombre).includes(sinTildes(buscarProducto.trim()))).map(p => (
                                 <label key={p.id} className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50">
                                     <input type="checkbox" className="h-4 w-4" checked={grupo.productos.includes(p.id)}
                                         onChange={e => setGrupo(g => g && { ...g, productos: e.target.checked ? [...g.productos, p.id] : g.productos.filter(x => x !== p.id) })} />

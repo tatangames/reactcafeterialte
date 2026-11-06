@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import FechaInput from "../../components/form/FechaInput";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -94,6 +95,15 @@ export default function Produccion() {
 
     const registrar = async () => {
         if (!receta) return;
+        // Un rendimiento muy distinto casi siempre es un número mal digitado (95 en vez de 195)
+        const plan = Number(planificada || 0);
+        if (plan > 0) {
+            const pct = Math.round(prod / plan * 1000) / 10;
+            if ((pct < 80 || pct > 120) && !window.confirm(
+                `Salieron ${prod} de ${plan} planificados (${pct}%).
+
+¿Es correcto? Si fue un error al digitar, toca Cancelar y corrígelo.`)) return;
+        }
         setGuardando(true);
         try {
             const res = await registrarProduccion({
@@ -107,6 +117,8 @@ export default function Produccion() {
             toast.success(res.message);
             setUuid(nuevoUuid());
             setReceta(null);
+            setPlanificada('');
+            setProducida('');
             setReales({});
             setObservaciones('');
             setDetalle(res.produccion);
@@ -208,7 +220,7 @@ export default function Produccion() {
                             </select>
                         </FormField>
                         <FormField label="Fecha">
-                            <input type="date" className={inputClass} value={fecha} max={hoyLocal()} onChange={e => setFecha(e.target.value)} />
+                            <FechaInput className={inputClass} value={fecha} max={hoyLocal()} onChange={(v) => setFecha(v)} />
                         </FormField>
                         <FormField label={`Planificado${receta?.unidad ? ` (${receta.unidad})` : ''}`} hint={receta ? `${redondear(Number(planificada || 0) / receta.rendimiento)} tanda(s)` : undefined}>
                             <MoneyInput decimals={3} placeholder="0" value={planificada} onChange={v => { setPlanificada(v); setReales({}); }} disabled={!receta} />

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import FechaInput from "../../components/form/FechaInput";
 
 import LoadingModal from '../../components/Loading/LoadingModal';
 import PageHeader from '../../components/common/PageHeader';
@@ -59,11 +60,10 @@ export default function InventarioNuevoRegistro() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Fecha <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="date"
+                                <FechaInput
                                     value={form.fecha}
                                     max={hoyLocal()}
-                                    onChange={e => handleChange('fecha', e.target.value)}
+                                    onChange={v => handleChange('fecha', v)}
                                     className="w-full h-[42px] rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition"
                                 />
                             </div>
