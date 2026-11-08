@@ -79,6 +79,7 @@ export interface ProductoFormInterface {
     consumo_interno: boolean;
     controla_stock: boolean;
     permite_fraccion: boolean;
+    imprime_comanda: boolean; // false: se entrega directo, nunca manda comanda a cocina/barra
     costo_unitario: string;
     precio_venta: string;
     stock_minimo: string;
@@ -102,6 +103,7 @@ export interface ProductoEditInterface {
     consumo_interno: boolean;
     controla_stock: boolean;
     permite_fraccion: boolean;
+    imprime_comanda?: boolean;
     costo_unitario: string;
     precio_venta: string;
     stock_actual: number;

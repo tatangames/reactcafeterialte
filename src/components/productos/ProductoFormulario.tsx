@@ -151,6 +151,10 @@ export default function ProductoFormulario({
                             titulo="Admite decimales" descripcion="Por peso o volumen (ej. 2.5 lb)" />
                         <Interruptor checked={form.consumo_interno} onChange={(v) => onChange("consumo_interno", v)}
                             titulo="Consumo interno" descripcion="Cena del personal o cortesía: sale a $0.00, no entra a caja y solo descuenta su receta" />
+                        {form.se_vende && (
+                            <Interruptor checked={form.imprime_comanda} onChange={(v) => onChange("imprime_comanda", v)}
+                                titulo="Imprime comanda" descripcion="Apágalo si se entrega directo (coca en lata, pan de vitrina): no manda comanda a cocina ni a barra aunque su categoría tenga área" />
+                        )}
                     </div>
                     {!form.controla_stock && (
                         <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">

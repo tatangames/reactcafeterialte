@@ -4,7 +4,7 @@
 import { MetodoPagoInterface } from "../types/caja";
 import { DescuentoInterface, LineaCarritoInterface, PagoFormInterface, VentaInterface } from "../types/pos";
 import { VentaOfflinePayload } from "../services/sync";
-import { detalleDe, itemDeLinea, precioDe, redondear, TotalesCarrito } from "./carrito";
+import { detalleDe, itemDeLinea, precioDe, redondear, textoAjuste, TotalesCarrito } from "./carrito";
 
 const CLAVE_SECUENCIA = "pos_secuencia_offline";
 
@@ -104,6 +104,8 @@ export const construirVentaOffline = (d: Datos): { payload: VentaOfflinePayload;
             id: i + 1,
             producto_id: l.producto.id,
             nombre: detalleDe(l) ? `${l.producto.nombre} (${detalleDe(l)})${l.notas ? ` · ${l.notas}` : ""}` : l.producto.nombre + (l.notas ? ` · ${l.notas}` : ""),
+            nombre_base: l.producto.nombre,
+            extras: [...(l.extras ?? []), ...(l.ajustes ?? []).map(textoAjuste), ...(l.notas ? [l.notas] : [])],
             unidad: l.producto.unidad,
             cantidad: l.cantidad,
             precio_unitario: precioDe(l),

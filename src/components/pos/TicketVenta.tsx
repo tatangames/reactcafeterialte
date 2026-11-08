@@ -75,7 +75,8 @@ export default function TicketVenta({ venta, negocio }: Props) {
                         <tr key={d.id}>
                             <td className="align-top">{n2(d.cantidad)}</td>
                             <td className="pr-1 align-top">
-                                {d.nombre}
+                                {d.extras?.length ? d.nombre_base ?? d.nombre : d.nombre}
+                                {d.extras?.map((e, i) => <span key={i} className="block pl-1">* {e}</span>)}
                                 {d.descuento > 0 && <span className="block">Descuento -{n2(d.descuento)}</span>}
                             </td>
                             <td className="pl-2 text-right align-top">{n2(d.precio_unitario)}</td>

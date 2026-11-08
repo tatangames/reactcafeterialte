@@ -79,6 +79,8 @@ export interface VentaDetalleInterface {
     id: number;
     producto_id: number;
     nombre: string;
+    nombre_base?: string;   // el producto sin los extras
+    extras?: string[];      // extras, cambios de receta y nota: uno por renglón en el ticket
     unidad: string | null;
     cantidad: number;
     precio_unitario: number;
