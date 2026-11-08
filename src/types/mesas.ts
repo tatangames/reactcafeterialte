@@ -121,10 +121,15 @@ export interface ProductoMesaInterface {
     categorias: number[];
     grupos: number[];
     stock: number | null;
+    disponible: number | null;   // existencia menos lo apartado en otras cuentas abiertas
+    bajo_minimo: boolean;
+    unidad: string | null;
     receta: IngredienteReceta[];
+    alcanza: number | null;      // platos con receta: cuántos alcanzan con los insumos, menos lo apartado
 }
 
 export interface CatalogoMesasInterface {
+    permitir_stock_negativo?: boolean;
     productos: ProductoMesaInterface[];
     categorias: { id: number; nombre: string }[];
     grupos: GrupoModificadorInterface[];

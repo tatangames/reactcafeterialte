@@ -7,6 +7,7 @@ import LoadingModal from "../../components/Loading/LoadingModal";
 import NuevoUsuarioModal from "../../components/modal/NuevoUsuarioModal.tsx";
 import EditarUsuarioModal from "../../components/modal/Editarusuariomodal.tsx";
 import { useUsuarios } from "../../hooks/rolesypermisos/useUsuariosHook.ts";
+import { fechaHora } from '../../utils/formato';
 
 interface Usuario {
   id: number;
@@ -83,7 +84,7 @@ export default function Usuarios() {
       selector: (row: Usuario) => row.ultimo_acceso ?? "",
       cell: (row: Usuario) => (
           <span className="text-sm text-gray-600">
-            {row.ultimo_acceso ? row.ultimo_acceso.slice(0, 10).split("-").reverse().join("/") + " " + row.ultimo_acceso.slice(11) : "Nunca"}
+            {row.ultimo_acceso ? fechaHora(row.ultimo_acceso) : "Nunca"}
           </span>
       ),
     },
@@ -95,7 +96,7 @@ export default function Usuarios() {
       cell: (row: Usuario) => (
           <div className="flex flex-col">
             <span className="text-sm text-gray-600" title="Fecha en que se estableció o cambió el PIN">
-              {row.pin_actualizado_at ? row.pin_actualizado_at.slice(0, 10).split("-").reverse().join("/") + " " + row.pin_actualizado_at.slice(11) : "Sin PIN"}
+              {row.pin_actualizado_at ? fechaHora(row.pin_actualizado_at) : "Sin PIN"}
             </span>
             {/* Cada quien crea su propio PIN (con su contraseña), por eso solo sale en tu fila */}
             {row.id === user?.id ? (

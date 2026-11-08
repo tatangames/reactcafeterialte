@@ -15,7 +15,8 @@ import {
     vaciarNotificaciones,
 } from "../../services/notificaciones";
 import { PaginaInterface } from "../../types/interfaces";
-import { mensajeError } from "../../utils/formato";
+import { mensajeError, fechaHora, fechaLocal } from "../../utils/formato";
+import Cargando from '../../components/ui/loading/Cargando';
 
 type Estado = "" | "no_leidas" | "leidas";
 const FILTROS: [Estado, string][] = [["", "Todas"], ["no_leidas", "Sin ver"], ["leidas", "Vistas"]];
@@ -96,7 +97,7 @@ export default function Notificaciones() {
 
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <ul className="divide-y divide-gray-100">
-                    {!datos && <li className="px-4 py-10 text-center text-gray-500">Cargando...</li>}
+                    {!datos && <li><Cargando /></li>}
                     {datos?.notificaciones.length === 0 && (
                         <li className="px-4 py-10 text-center text-gray-500">
                             {estado === "no_leidas" ? "Estás al día, no hay nada sin ver" : "No hay notificaciones"}
@@ -109,7 +110,7 @@ export default function Notificaciones() {
                                 <span className={`block text-sm ${n.leida ? "text-gray-700" : "font-semibold text-gray-900"}`}>{n.titulo}</span>
                                 {n.mensaje && <span className="block text-sm text-gray-500">{n.mensaje}</span>}
                                 <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                                    <span title={new Date(n.fecha).toLocaleString("es-SV")}>{haceCuanto(n.fecha)}</span>
+                                    <span title={fechaHora(fechaLocal(new Date(n.fecha)) + " " + new Date(n.fecha).toTimeString().slice(0, 5))}>{haceCuanto(n.fecha)}</span>
                                     {n.sigue_en_alerta === true && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">sigue bajo</span>}
                                     {n.sigue_en_alerta === false && <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">ya repuesto</span>}
                                 </span>

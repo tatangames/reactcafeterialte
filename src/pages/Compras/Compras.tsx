@@ -14,6 +14,8 @@ import { useCaja } from '../../context/CajaContext';
 import { anularCompra, getCompra, getCompras, getProveedores } from '../../services/compras';
 import { cantidad, dinero, fechaCorta, haceDias, hoyLocal, mensajeError } from '../../utils/formato';
 import { CompraInterface, ComprasResponseInterface, ProveedorInterface, TIPOS_DOCUMENTO } from '../../types/compras';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
+import LoadingModal from '../../components/Loading/LoadingModal';
 
 export default function Compras() {
     const navigate = useNavigate();
@@ -21,6 +23,7 @@ export default function Compras() {
     const { hasPermission } = useAuth();
     const { refrescar } = useCaja();
 
+    const [abriendo, setAbriendo] = useState(false);
     const [rango, setRango] = useState({ desde: haceDias(29), hasta: hoyLocal() });
     const [proveedorId, setProveedorId] = useState(params.get('proveedor') ?? '');
     const [estado, setEstado] = useState('');
@@ -55,7 +58,11 @@ export default function Compras() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params]);
 
-    const abrir = (id: number) => getCompra(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la compra')));
+    const abrir = (id: number) => {
+        setAbriendo(true);
+        getCompra(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la compra')))
+            .finally(() => setAbriendo(false));
+    }
 
     const anular = async (motivo: string) => {
         if (!detalle) return;
@@ -76,6 +83,7 @@ export default function Compras() {
 
     return (
         <div className="p-6">
+            <LoadingModal isOpen={abriendo} text="Abriendo compra..." />
             <MotivoModal isOpen={anulando} titulo={`Anular compra ${detalle?.numero ?? ''}`}
                 descripcion="Sale del inventario lo que entró y se anula lo que se debe. Si fue de contado, también se anula su pago. Queda en auditoría."
                 textoConfirmar="Anular compra" isLoading={guardando} onClose={() => setAnulando(false)} onConfirm={anular} />
@@ -182,7 +190,7 @@ export default function Compras() {
                             <th className="px-4 py-3">Condición</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3 text-right">Saldo</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {!datos && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>}
+                        {!datos && <FilaCargando colSpan={7} />}
                         {datos?.compras.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No hay compras en el periodo</td></tr>}
                         {datos?.compras.map(c => (
                             <tr key={c.id} onClick={() => abrir(c.id)} className={`cursor-pointer hover:bg-gray-50 ${c.estado === 'anulada' ? 'text-gray-400' : ''}`}>

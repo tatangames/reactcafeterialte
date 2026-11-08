@@ -23,6 +23,7 @@ const ResetPasswordForm = () => {
                     className={emailError ? "border-red-500" : ""}
                     placeholder="correo@ejemplo.com"
                     maxLength={100}
+                    autoComplete="off"
                 />
                 {emailError && (
                     <p className="text-sm text-red-500">{emailError}</p>

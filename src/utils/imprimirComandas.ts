@@ -20,7 +20,7 @@ export const imprimirComandasNavegador = (comandas: ComandaInterface[], copia = 
 
     const nombre = (negocio || "Panadería Eduardo").toUpperCase();
     const lugar = (c: ComandaInterface) => c.terminal_tipo === "mesa" ? `Mesa: ${c.terminal}` : c.terminal_tipo === "caja" ? "Mostrador" : c.terminal;
-    const fecha = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`;
+    const fecha = (f: string) => `${f.slice(8, 10)}-${f.slice(5, 7)}-${f.slice(0, 4)}`;
 
     const paginas = activas.map((c) => `
         <section class="comanda">
@@ -76,8 +76,9 @@ export const imprimirComandasNavegador = (comandas: ComandaInterface[], copia = 
 };
 
 /**
- * Comandas de una venta de mostrador, una por área (lo que no tiene área va en la
- * comanda general), con la misma forma que las de mesa para imprimirlas igual.
+ * Comandas de una venta de mostrador, una por área, con la misma forma que las de
+ * mesa para imprimirlas igual. Lo que no tiene área (pan de vitrina) se entrega
+ * directo: solo lleva el ticket de venta.
  */
 export const comandasDeMostrador = (lineas: LineaCarritoInterface[], numero: string, usuario: string | null): ComandaInterface[] => {
     const ahora = new Date();
@@ -86,7 +87,8 @@ export const comandasDeMostrador = (lineas: LineaCarritoInterface[], numero: str
 
     const porArea = new Map<string, LineaCarritoInterface[]>();
     lineas.forEach((l) => {
-        const area = l.producto.area ?? "";
+        const area = l.producto.area;
+        if (!area) return;
         porArea.set(area, [...(porArea.get(area) ?? []), l]);
     });
 

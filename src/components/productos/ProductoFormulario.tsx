@@ -1,6 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 
+import AyudaClases from "./AyudaClases";
 import FormField, { inputClass } from "../form/FormField";
 import MoneyInput from "../form/MoneyInput";
 import OrdenPosCampo from "./OrdenPosCampo";
@@ -65,6 +66,7 @@ export default function ProductoFormulario({
     const unidadSel = unidades.find((u) => String(u.id) === form.unidad_medida_id);
     const abrev = unidadSel?.abreviatura ?? unidadSel?.nombre ?? "";
     const m = margen(form.costo_unitario, form.precio_venta);
+    const [verAyudaClase, setVerAyudaClase] = useState(false);
 
     const cambiarClase = (clase: ClaseProducto) => {
         Object.entries(defaultsPorClase(clase)).forEach(([k, v]) =>
@@ -105,7 +107,20 @@ export default function ProductoFormulario({
 
                 {/* Clasificación */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
-                    <h2 className="text-lg font-semibold text-gray-800">Clasificación</h2>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-gray-800">Clasificación</h2>
+                        <button type="button" onClick={() => setVerAyudaClase((v) => !v)} aria-expanded={verAyudaClase}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                verAyudaClase ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600"
+                            }`}>
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-bold">?</span>
+                            ¿Qué clase elijo?
+                        </button>
+                    </div>
+                    {verAyudaClase && (
+                        <AyudaClases form={form}
+                            onElegir={(a) => (Object.entries(a) as [keyof ProductoFormInterface, never][]).forEach(([k, v]) => onChange(k, v))} />
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField label="Clase" required>
@@ -223,16 +238,19 @@ export default function ProductoFormulario({
                             })}
                         </div>
                     )}
-                    {/* Todo lo que se vende sale en comanda: el área viene de la categoría */}
+                    {/* El área de la comanda viene de la categoría; sin área se entrega directo */}
                     {form.se_vende && (() => {
                         const area = categorias.find((c) => form.categorias.includes(c.id) && c.area)?.area;
                         return area
                             ? <p className="text-sm text-gray-600">Comanda: <span className="font-semibold text-gray-800">{area.nombre}</span></p>
-                            : <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                                {form.categorias.length === 0
-                                    ? "Sin categoría: saldrá en la comanda general. Elige su categoría arriba."
-                                    : "Su categoría no tiene área: saldrá en la comanda general. Asígnala en Configuración › Mesas y cocina › Áreas."}
-                              </p>;
+                            : form.categorias.length === 0
+                                ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                    Sin categoría: elige una arriba para que aparezca en su pestaña del punto de venta.
+                                  </p>
+                                : <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                    Sin comanda: se entrega directo y solo sale el ticket de venta (pan, postres de vitrina, bebidas embotelladas).
+                                    Si hay que prepararlo, asigna un área a su categoría en Configuración › Mesas y cocina › Áreas.
+                                  </p>;
                     })()}
                 </div>
             </div>

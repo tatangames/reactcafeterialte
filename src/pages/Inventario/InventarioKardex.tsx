@@ -4,8 +4,9 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import { useKardexHook } from '../../hooks/inventario/useKardexHook';
-import { CLASES_PRODUCTO, cantidad, dinero } from '../../utils/formato';
+import { CLASES_PRODUCTO, cantidad, dinero, fechaHora } from '../../utils/formato';
 import { TipoMovimiento } from '../../types/interfaces';
+import { CapaCargando } from '../../components/ui/loading/Cargando';
 
 const tonoTipo: Record<TipoMovimiento, 'success' | 'danger' | 'warning' | 'info' | 'neutral'> = {
     entrada: 'success', compra: 'success', produccion: 'info', devolucion: 'success', anulacion: 'neutral',
@@ -54,7 +55,8 @@ export default function InventarioKardex() {
                             <Tarjeta titulo="Saldo final" valor={cantidad(kardex.saldo_final, unidad)} detalle={`al ${kardex.hasta}`} />
                         </div>
 
-                        <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto ${loading ? 'opacity-60' : ''}`}>
+                        <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto relative`}>
+                            <CapaCargando visible={loading} />
                             <table className="w-full min-w-[860px] text-sm">
                                 <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                                     <tr>
@@ -82,7 +84,7 @@ export default function InventarioKardex() {
                                     )}
                                     {kardex.movimientos.map(m => (
                                         <tr key={m.id} className="hover:bg-gray-50">
-                                            <td className="px-4 py-2 whitespace-nowrap text-gray-600">{m.fecha}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-gray-600">{fechaHora(m.fecha)}</td>
                                             <td className="px-4 py-2">
                                                 <StatusBadge tone={tonoTipo[m.tipo]}>{m.tipo_texto}</StatusBadge>
                                                 {m.usuario && <div className="mt-0.5 text-xs text-gray-400">{m.usuario}</div>}

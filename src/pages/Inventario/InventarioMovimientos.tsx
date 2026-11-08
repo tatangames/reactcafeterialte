@@ -8,8 +8,9 @@ import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import { CanAccess } from '../../components/auth/CanAccess';
 import { getMovimientos, getStock } from '../../services/inventario';
-import { cantidad, dinero, haceDias, hoyLocal, mensajeError, TIPOS_MOVIMIENTO } from '../../utils/formato';
+import { cantidad, dinero, haceDias, hoyLocal, mensajeError, TIPOS_MOVIMIENTO, fechaHora } from '../../utils/formato';
 import { InventarioStockInterface, MovimientosResponseInterface } from '../../types/interfaces';
+import { CapaCargando, FilaCargando } from '../../components/ui/loading/Cargando';
 
 const selectClass = 'h-[42px] rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none';
 
@@ -57,7 +58,8 @@ export default function InventarioMovimientos() {
                 </select>
             </div>
 
-            <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto ${loading ? 'opacity-60' : ''}`}>
+            <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto relative`}>
+                <CapaCargando visible={loading && !!datos} />
                 <table className="w-full min-w-[900px] text-sm">
                     <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                         <tr>
@@ -72,12 +74,13 @@ export default function InventarioMovimientos() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!datos && <FilaCargando colSpan={8} />}
                         {datos && datos.movimientos.length === 0 && (
                             <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-500">Sin movimientos con esos filtros</td></tr>
                         )}
                         {datos?.movimientos.map(m => (
                             <tr key={m.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-2 whitespace-nowrap text-gray-600">{m.fecha}</td>
+                                <td className="px-4 py-2 whitespace-nowrap text-gray-600">{fechaHora(m.fecha)}</td>
                                 <td className="px-4 py-2">
                                     <CanAccess permission="inventario.kardex" fallback={<span>{m.producto}</span>}>
                                         <Link to={`/admin/inventario/kardex/${m.producto_id}`} className="text-blue-600 hover:underline">{m.producto}</Link>

@@ -15,9 +15,11 @@ import { anularVenta, devolverVenta, getVenta, getVentas } from '../../services/
 import { imprimirVentaServidor } from '../../services/impresion';
 import { nuevoUuid } from '../../utils/cajaDispositivo';
 import { imprimirConRespaldo } from '../../utils/imprimir';
-import { dinero, hoyLocal, mensajeError } from '../../utils/formato';
+import { dinero, hoyLocal, mensajeError, fechaHora } from '../../utils/formato';
 import { ConfiguracionNegocioInterface } from '../../types/interfaces';
 import { VentaInterface, VentasResponseInterface } from '../../types/pos';
+import { CapaCargando, FilaCargando } from '../../components/ui/loading/Cargando';
+import LoadingModal from '../../components/Loading/LoadingModal';
 
 const tonoEstado = { completada: 'success', anulada: 'danger', devuelta: 'warning' } as const;
 const textoEstado = { completada: 'Completada', anulada: 'Anulada', devuelta: 'Devuelta' };
@@ -28,6 +30,7 @@ export default function VentasHistorial() {
     const { cajaId, catalogos, actual, refrescar } = useCaja();
 
     // Desde el panel de inicio: ?desde=&hasta= y ?venta= abre su detalle
+    const [abriendo, setAbriendo] = useState(false);
     const [rango, setRango] = useState({ desde: params.get('desde') ?? hoyLocal(), hasta: params.get('hasta') ?? hoyLocal() });
     const ventaParam = params.get('venta');
     const [estado, setEstado] = useState('');
@@ -53,8 +56,11 @@ export default function VentasHistorial() {
             .finally(() => setLoading(false));
     }, [turnoParam, rango, estado, buscar, pagina, recarga]);
 
-    const abrirDetalle = (id: number) =>
-        getVenta(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la venta')));
+    const abrirDetalle = (id: number) => {
+        setAbriendo(true);
+        getVenta(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la venta')))
+            .finally(() => setAbriendo(false));
+    }
 
     useEffect(() => {
         if (ventaParam) abrirDetalle(Number(ventaParam));
@@ -104,6 +110,7 @@ export default function VentasHistorial() {
 
     return (
         <div className="p-6">
+            <LoadingModal isOpen={abriendo} text="Abriendo venta..." />
             <MotivoModal isOpen={anulando} titulo={`Anular venta ${detalle?.numero ?? ''}`}
                 descripcion="Se devuelve el stock y el dinero sale de la caja del turno. Queda registrado en auditoría."
                 textoConfirmar="Anular venta" isLoading={guardando} onClose={() => setAnulando(false)} onConfirm={anular} />
@@ -120,14 +127,14 @@ export default function VentasHistorial() {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <h2 className="text-xl font-semibold">{detalle.numero}</h2>
-                                    <p className="text-sm text-gray-500">{detalle.fecha} · {detalle.usuario}</p>
+                                    <p className="text-sm text-gray-500">{fechaHora(detalle.fecha)} · {detalle.usuario}</p>
                                 </div>
                                 <StatusBadge tone={tonoEstado[detalle.estado]}>{textoEstado[detalle.estado]}</StatusBadge>
                             </div>
                             {detalle.estado === 'anulada' && (
                                 <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Anulada por {detalle.anulada_por}
                                     {detalle.anulacion_autorizada_por && detalle.anulacion_autorizada_por !== detalle.anulada_por ? ` (autorizó ${detalle.anulacion_autorizada_por})` : ''}
-                                    {' '}el {detalle.anulada_at}: {detalle.motivo_anulacion}</p>
+                                    {' '}el {fechaHora(detalle.anulada_at)}: {detalle.motivo_anulacion}</p>
                             )}
                             {detalle.descuento_autorizado_por && (
                                 <p className="text-sm text-amber-700">Descuento autorizado por {detalle.descuento_autorizado_por}</p>
@@ -136,7 +143,7 @@ export default function VentasHistorial() {
                                 <div>
                                     <p className="mb-1 text-sm font-semibold text-gray-700">Devoluciones</p>
                                     {detalle.devoluciones.map(d => (
-                                        <p key={d.id} className="text-sm text-gray-600">{d.numero} · {d.fecha} · {dinero(d.total)} ({d.metodo}) — {d.motivo}</p>
+                                        <p key={d.id} className="text-sm text-gray-600">{d.numero} · {fechaHora(d.fecha)} · {dinero(d.total)} ({d.metodo}) — {d.motivo}</p>
                                     ))}
                                 </div>
                             )}
@@ -187,7 +194,8 @@ export default function VentasHistorial() {
                 </div>
             )}
 
-            <div className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto ${loading ? 'opacity-60' : ''}`}>
+            <div className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto relative`}>
+                <CapaCargando visible={loading && !!datos} />
                 <table className="w-full min-w-[720px] text-sm">
                     <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                         <tr>
@@ -200,11 +208,12 @@ export default function VentasHistorial() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!datos && <FilaCargando colSpan={6} />}
                         {datos?.ventas.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No hay ventas</td></tr>}
                         {datos?.ventas.map(v => (
                             <tr key={v.id} onClick={() => abrirDetalle(v.id)} className="cursor-pointer hover:bg-blue-50/40">
                                 <td className="px-4 py-3 font-medium text-blue-700">{v.numero}</td>
-                                <td className="px-4 py-3 text-gray-600">{v.fecha}</td>
+                                <td className="px-4 py-3 text-gray-600">{fechaHora(v.fecha)}</td>
                                 <td className="px-4 py-3 text-gray-600">{v.usuario}</td>
                                 <td className="px-4 py-3 text-gray-600">{v.pagos.join(' + ')}</td>
                                 <td className={`px-4 py-3 text-right font-semibold ${v.estado === 'anulada' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{dinero(v.total)}</td>

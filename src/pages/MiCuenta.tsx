@@ -5,10 +5,10 @@ import PageHeader from "../components/common/PageHeader";
 import FormField, { inputClass } from "../components/form/FormField";
 import { useAuth } from "../context/AuthContext";
 import { cambiarMiPin, getMiCuenta } from "../services/api";
-import { mensajeError } from "../utils/formato";
+import { mensajeError, fechaCorta } from "../utils/formato";
 
 // "2026-11-04 14:30" → "04/11/2026 a las 14:30"
-const fechaHora = (f: string) => `${f.slice(0, 10).split("-").reverse().join("/")} a las ${f.slice(11, 16)}`;
+const fechaHora = (f: string) => `${fechaCorta(f)} a las ${f.slice(11, 16)}`;
 
 // Datos del usuario y su PIN: con el PIN autoriza en la tablet del mesero sin dar la contraseña
 export default function MiCuenta() {

@@ -16,6 +16,7 @@ import {
 import { nuevoUuid } from '../../utils/cajaDispositivo';
 import { cantidad, dinero, fechaCorta, hoyLocal, mensajeError } from '../../utils/formato';
 import { CatalogoProduccionInterface, ProduccionInterface, RecetaInterface } from '../../types/produccion';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 const redondear = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -286,6 +287,7 @@ export default function Produccion() {
                             <th className="px-4 py-3 text-right">Costo</th><th className="px-4 py-3 text-right">C/u</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!producciones && <FilaCargando colSpan={7} />}
                         {producciones?.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Sin producción en el periodo</td></tr>}
                         {producciones?.map(p => (
                             <tr key={p.id} onClick={() => getProduccion(p.id).then(setDetalle)} className={`cursor-pointer hover:bg-gray-50 ${p.estado === 'anulada' ? 'text-gray-400 line-through' : ''}`}>

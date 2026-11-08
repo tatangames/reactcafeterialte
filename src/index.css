@@ -1,5 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap")
 layer(base);
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap")
+layer(base);
 
 @import "tailwindcss";
 
@@ -8,6 +10,8 @@ layer(base);
 @theme {
   --font-*: initial;
   --font-outfit: Outfit, sans-serif;
+  /* Tickets y comprobantes: imitan la letra de la impresora térmica */
+  --font-mono: "Roboto Mono", Consolas, "Courier New", monospace;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;

@@ -66,6 +66,20 @@ export const mensajeError = (error: unknown, porDefecto: string): string => {
     return data?.message ?? porDefecto;
 };
 
-// "2026-11-01" o "2026-11-01 10:30" → "01/11/2026"
-export const fechaCorta = (iso: string | null | undefined): string =>
-    iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—";
+// Fechas para mostrar: día-mes-año. Lo que no viene como "2026-11-01..." se deja igual
+const PARTES_FECHA = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/;
+
+// "2026-11-01" o "2026-11-01 10:30" → "01-11-2026"
+export const fechaCorta = (iso: string | null | undefined): string => {
+    if (!iso) return "—";
+    const m = iso.match(PARTES_FECHA);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
+};
+
+// "2026-11-01 10:30[:00]" (o ISO) → "01-11-2026 10:30"; solo fecha → "01-11-2026"
+export const fechaHora = (iso: string | null | undefined): string => {
+    if (!iso) return "—";
+    const m = iso.match(PARTES_FECHA);
+    if (!m) return iso;
+    return m[4] ? `${m[3]}-${m[2]}-${m[1]} ${m[4]}:${m[5]}` : `${m[3]}-${m[2]}-${m[1]}`;
+};

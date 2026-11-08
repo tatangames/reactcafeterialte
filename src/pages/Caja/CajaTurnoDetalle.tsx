@@ -13,7 +13,8 @@ import { getTurno, reabrirTurno } from '../../services/caja';
 import { imprimirTurnoServidor } from '../../services/impresion';
 import { imprimirConRespaldo } from '../../utils/imprimir';
 import { TurnoDetalleInterface } from '../../types/caja';
-import { dinero, mensajeError } from '../../utils/formato';
+import { dinero, mensajeError, fechaHora } from '../../utils/formato';
+import { CargandoPagina } from '../../components/ui/loading/Cargando';
 
 export default function CajaTurnoDetalle() {
     const { id } = useParams();
@@ -45,7 +46,7 @@ export default function CajaTurnoDetalle() {
     };
 
     if (!detalle) {
-        return <div className="p-6 flex justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>;
+        return <CargandoPagina texto="Cargando turno..." />;
     }
 
     const { turno, movimientos, registros = [] } = detalle;
@@ -65,7 +66,7 @@ export default function CajaTurnoDetalle() {
 
             <PageHeader
                 title={`Turno #${turno.id} · ${turno.caja}`}
-                subtitle={`Abrió ${turno.usuario_apertura} el ${turno.abierto_at}` + (turno.cerrado_at ? ` · Cerró ${turno.usuario_cierre} el ${turno.cerrado_at}` : ' · en curso')}
+                subtitle={`Abrió ${turno.usuario_apertura} el ${fechaHora(turno.abierto_at)}` + (turno.cerrado_at ? ` · Cerró ${turno.usuario_cierre} el ${fechaHora(turno.cerrado_at)}` : ' · en curso')}
                 backTo={hasPermission('caja.historial') ? '/caja/historial' : '/caja'}
                 actions={
                     <>
@@ -95,7 +96,7 @@ export default function CajaTurnoDetalle() {
                             <div key={m.id} className={`flex items-center gap-3 px-5 py-3 ${m.anulado ? 'opacity-50' : ''}`}>
                                 <div className="min-w-0 flex-1">
                                     <p className={`text-sm font-medium text-gray-800 ${m.anulado ? 'line-through' : ''}`}>{m.concepto}</p>
-                                    <p className="text-xs text-gray-500">{m.fecha} · {m.tipo_texto} · {m.metodo_pago} · {m.usuario}</p>
+                                    <p className="text-xs text-gray-500">{fechaHora(m.fecha)} · {m.tipo_texto} · {m.metodo_pago} · {m.usuario}</p>
                                     {m.anulado && <p className="text-xs text-red-600">Anulado por {m.anulado_por}: {m.motivo_anulacion}</p>}
                                 </div>
                                 <span className={`whitespace-nowrap text-sm font-semibold ${m.entrada ? 'text-green-700' : 'text-red-600'}`}>
@@ -120,7 +121,7 @@ export default function CajaTurnoDetalle() {
                                 <p className={`text-sm font-medium text-gray-800 ${r.anulado ? 'line-through' : ''}`}>
                                     {r.tipo}{r.numero ? ` ${r.numero}` : ''}{r.descripcion ? ` · ${r.descripcion}` : ''}
                                 </p>
-                                <p className="text-xs text-gray-500">{r.fecha} · {r.usuario}{r.anulado ? ' · anulado' : ''}</p>
+                                <p className="text-xs text-gray-500">{fechaHora(r.fecha)} · {r.usuario}{r.anulado ? ' · anulado' : ''}</p>
                             </div>
                             {r.monto !== null && <span className="whitespace-nowrap text-sm font-semibold text-gray-700">{dinero(r.monto)}</span>}
                         </div>

@@ -6,6 +6,7 @@ import PageHeader from '../../components/common/PageHeader';
 import Interruptor from '../../components/form/Interruptor';
 import { getPermisosManuales, guardarPermisosManuales, PermisosManualesInterface } from '../../services/manuales';
 import { mensajeError } from '../../utils/formato';
+import { CargandoPagina } from '../../components/ui/loading/Cargando';
 
 // Qué manuales ve cada rol. El administrador los ve todos; aquí se elige para el mesero (y cualquier otro rol)
 export default function PermisosManuales() {
@@ -64,7 +65,7 @@ export default function PermisosManuales() {
         }
     };
 
-    if (!datos) return <div className="p-6 text-gray-500">Cargando…</div>;
+    if (!datos) return <CargandoPagina />;
 
     return (
         <div className="p-4 sm:p-6 pb-28">

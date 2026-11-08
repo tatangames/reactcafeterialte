@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { ConfiguracionNegocioInterface } from "../../types/interfaces";
 import { VentaInterface } from "../../types/pos";
 import { dolaresEnLetras } from "../../utils/numeroALetras";
+import { fechaCorta, fechaHora } from '../../utils/formato';
 
 interface Props {
     venta: VentaInterface;
@@ -9,24 +11,28 @@ interface Props {
 }
 
 const n2 = (v: number) => Number(v).toFixed(2);
-// "2026-11-05 14:43" → "05/11/2026 14:43"
-const fechaHora = (f: string) => {
-    const m = f.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : f;
-};
-const Separador = () => <p className="my-2 overflow-hidden whitespace-nowrap text-gray-500">{"=".repeat(60)}</p>;
+const Separador = () => <p className="my-3 overflow-hidden whitespace-nowrap text-gray-400">{"=".repeat(60)}</p>;
+
+// Texto "doble alto" como la impresora térmica: letra grande comprimida a lo ancho.
+// El ancho se compensa (1 / 0.62) para que el texto envuelva igual y la altura del bloque sea la real.
+const DobleAlto = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
+    <div className="overflow-hidden">
+        <p className={`origin-left text-center leading-[1.05] ${className}`} style={{ width: `${100 / 0.62}%`, transform: "scaleX(0.62)" }}>
+            {children}
+        </p>
+    </div>
+);
 
 // Recibo de 80 mm con el mismo formato que el ticket térmico (ImpresionService::ticket), impreso con window.print()
-export default function TicketVenta({ venta, negocio, copia = false }: Props) {
+export default function TicketVenta({ venta, negocio }: Props) {
     const metodos = [...new Set(venta.pagos.map((p) => p.metodo).filter(Boolean))] as string[];
     const condicion = metodos.length ? metodos.join(", ").replace(/, ([^,]*)$/, " y $1") : (venta.anticipo_aplicado ?? 0) > 0 ? "Anticipo" : "Efectivo";
-    const recibido = venta.pagos.reduce((t, p) => t + (p.recibido ?? 0), 0);
     const nombre = negocio?.nombre ?? "Panadería Eduardo";
 
     return (
-        <div className="area-impresion mx-auto w-full max-w-[300px] bg-white p-4 font-mono text-[12px] leading-snug text-gray-900">
+        <div className="area-impresion mx-auto w-full max-w-[300px] bg-white p-4 font-mono text-[12px] leading-snug text-black">
             <div className="text-center">
-                <p className="text-[17px] font-bold leading-tight tracking-tight" style={{ transform: "scaleY(1.3)" }}>{negocio?.razon_social || nombre}</p>
+                <DobleAlto className="text-[26px] uppercase">{negocio?.razon_social || nombre}</DobleAlto>
                 {negocio?.direccion && <p className="mt-1">{negocio.direccion}</p>}
                 {negocio?.razon_social && <p>{nombre}</p>}
                 {negocio?.nit && <p className="font-bold">NIT: {negocio.nit}</p>}
@@ -40,19 +46,14 @@ export default function TicketVenta({ venta, negocio, copia = false }: Props) {
             <Separador />
             <div className="text-center">
                 <p className="font-bold">Recibo</p>
-                {copia && <p className="font-bold">*** COPIA ***</p>}
                 {venta.estado === "anulada" && <p className="font-bold">*** ANULADA ***</p>}
                 {venta.pendiente && <p className="text-[11px]">Emitido sin conexión. El número definitivo se asigna al sincronizar.</p>}
                 <p>Fecha y hora de generación:</p>
                 <p className="font-bold">{fechaHora(venta.fecha)}</p>
             </div>
-            <div className="flex justify-between gap-3">
-                <span>Emisor</span>
-                <span className="text-right">{`${nombre} ${venta.caja ?? ""}`.trim()}</span>
-            </div>
 
             <Separador />
-            <p className="text-center text-[15px] font-bold" style={{ transform: "scaleY(1.3)" }}>Datos del receptor</p>
+            <DobleAlto className="text-[22px]">Datos del receptor</DobleAlto>
             <p className="mt-1">Nombre: {venta.cliente?.nombre || "Consumidor Final"}</p>
             {venta.cliente?.documento && <p>DUI/NIT: {venta.cliente.documento}</p>}
             <p>Dirección: {venta.cliente?.direccion || "Ciudad"}</p>
@@ -65,8 +66,8 @@ export default function TicketVenta({ venta, negocio, copia = false }: Props) {
                     <tr className="font-bold">
                         <td className="w-[42px] align-top">Cant</td>
                         <td className="align-top">Descripción</td>
-                        <td className="text-right align-top">Precio</td>
-                        <td className="text-right align-top">Total</td>
+                        <td className="pl-2 text-right align-top">Precio</td>
+                        <td className="pl-2 text-right align-top">Total</td>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,8 +78,8 @@ export default function TicketVenta({ venta, negocio, copia = false }: Props) {
                                 {d.nombre}
                                 {d.descuento > 0 && <span className="block">Descuento -{n2(d.descuento)}</span>}
                             </td>
-                            <td className="text-right align-top">{n2(d.precio_unitario)}</td>
-                            <td className="text-right align-top">{n2(d.cantidad * d.precio_unitario)}</td>
+                            <td className="pl-2 text-right align-top">{n2(d.precio_unitario)}</td>
+                            <td className="pl-2 text-right align-top">{n2(d.cantidad * d.precio_unitario)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -86,7 +87,7 @@ export default function TicketVenta({ venta, negocio, copia = false }: Props) {
             <div className="text-right">
                 {venta.descuento_total > 0 && <p>Subtotal: $ {n2(venta.subtotal + venta.descuento_lineas)}</p>}
                 {venta.descuento_global > 0 && <p>Descuento: -$ {n2(venta.descuento_global)}</p>}
-                <p className="font-bold">Total: $ {n2(venta.total)}</p>
+                <p>Total: $ {n2(venta.total)}</p>
                 {(venta.anticipo_aplicado ?? 0) > 0 && (
                     <>
                         <p>Anticipo recibido: $ {n2(venta.anticipo_aplicado ?? 0)}</p>
@@ -98,13 +99,7 @@ export default function TicketVenta({ venta, negocio, copia = false }: Props) {
             <p>{dolaresEnLetras(venta.total)}</p>
             <p>Condición de la operación: {condicion}</p>
             {venta.pagos.filter((p) => p.referencia).map((p, i) => <p key={i}>{p.metodo} ref. {p.referencia}</p>)}
-            {venta.cambio > 0 && (
-                <>
-                    <p>Efectivo recibido: $ {n2(recibido)}</p>
-                    <p>Cambio: $ {n2(venta.cambio)}</p>
-                </>
-            )}
-            {venta.credito && <p className="mt-1">Crédito: vence el {venta.credito.fecha_vencimiento.split("-").reverse().join("/")}</p>}
+            {venta.credito && <p className="mt-1">Crédito: vence el {fechaCorta(venta.credito.fecha_vencimiento)}</p>}
             {venta.credito && (
                 <div className="mt-6 text-center">
                     <p>______________________________</p>

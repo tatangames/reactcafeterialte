@@ -290,6 +290,11 @@ const navItems: NavItem[] = [
         path: "/admin/configuracion/negocio",
         permissions: ["configuracion.gestionar"],
       },
+      {
+        name: "Facturación electrónica",
+        path: "/admin/configuracion/facturacion-electronica",
+        permissions: ["configuracion.gestionar"],
+      },
     ],
   },
 

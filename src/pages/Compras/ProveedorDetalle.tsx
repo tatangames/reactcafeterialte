@@ -12,6 +12,7 @@ import { useCaja } from '../../context/CajaContext';
 import { anularPagoProveedor, getProveedor } from '../../services/compras';
 import { dinero, fechaCorta, mensajeError } from '../../utils/formato';
 import { PagoProveedorInterface, ProveedorDetalleInterface } from '../../types/compras';
+import { CargandoPagina } from '../../components/ui/loading/Cargando';
 
 type Pestana = 'pendientes' | 'pagos' | 'productos';
 const tarjeta = 'rounded-xl border border-gray-200 bg-white p-4';
@@ -51,7 +52,7 @@ export default function ProveedorDetalle() {
         }
     };
 
-    if (!datos) return <div className="p-6 text-gray-500">Cargando...</div>;
+    if (!datos) return <CargandoPagina />;
     const { proveedor, resumen } = datos;
 
     return (

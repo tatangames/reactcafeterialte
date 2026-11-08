@@ -7,6 +7,7 @@ import FormField, { inputClass } from "../../../components/form/FormField";
 import ConfirmDeleteModal from "../../../components/modal/ConfirmDeleteModal";
 import { useImpresoras } from "../../../hooks/configuracion/useImpresorasHook";
 import { ImpresoraInterface, UsoImpresora } from "../../../types/interfaces";
+import { fechaHora } from '../../../utils/formato';
 
 const USOS: Record<UsoImpresora, { titulo: string; descripcion: string }> = {
     ticket:  { titulo: "Tickets", descripcion: "Comprobante del cliente y cierres de caja" },
@@ -51,8 +52,8 @@ export default function Impresoras() {
                             </FormField>
 
                             <FormField label="Conexión" required>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {([["red", "Red (Ethernet / Wi-Fi)"], ["windows", "USB en el servidor (Windows)"]] as const).map(([v, t]) => (
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                    {([["dispositivo", "Desde la tablet (Wi-Fi)"], ["red", "Desde el servidor (red local)"], ["windows", "USB en el servidor (Windows)"]] as const).map(([v, t]) => (
                                         <button key={v} type="button" onClick={() => set("conexion", v)}
                                             className={`rounded-lg border px-3 py-2.5 text-sm font-medium ${form.conexion === v ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-300 text-gray-700"}`}>
                                             {t}
@@ -61,7 +62,12 @@ export default function Impresoras() {
                                 </div>
                             </FormField>
 
-                            {form.conexion === "red" ? (
+                            {form.conexion === "dispositivo" && (
+                                <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                                    Para el servidor en la nube: el ticket queda en una cola y lo manda a la impresora la tablet que tiene activado «Esta tablet imprime» (Ajustes → Impresoras en la tablet). Desde este navegador se imprime con el respaldo del navegador.
+                                </p>
+                            )}
+                            {form.conexion !== "windows" ? (
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="col-span-2">
                                         <FormField label="IP de la impresora" required hint="La imprime la propia impresora al encenderla con el botón FEED">
@@ -177,7 +183,7 @@ export default function Impresoras() {
                                     <div>
                                         <p className="text-lg font-semibold text-gray-800">{imp.alias}</p>
                                         <p className="text-sm text-gray-500">
-                                            {imp.conexion === "red" ? `Red · ${imp.ip_impresora}:${imp.puerto}` : `Windows · ${imp.nombre_windows}`}
+                                            {imp.conexion === "windows" ? `Windows · ${imp.nombre_windows}` : `${imp.conexion === "dispositivo" ? "Tablet" : "Red"} · ${imp.ip_impresora}:${imp.puerto}`}
                                             {" · "}{imp.ancho_caracteres >= 42 ? "80 mm" : "58 mm"}
                                         </p>
                                     </div>
@@ -243,7 +249,7 @@ export default function Impresoras() {
                                         {t.tipo_texto}{t.documento_tipo === "venta" && t.documento_id ? ` · venta #${t.documento_id}` : ""} · {t.impresora ?? "sin impresora"}
                                     </p>
                                     <p className="text-xs text-red-600">{t.error}</p>
-                                    <p className="text-xs text-gray-400">{t.fecha} · {t.intentos} intento(s){t.usuario ? ` · ${t.usuario}` : ""}</p>
+                                    <p className="text-xs text-gray-400">{fechaHora(t.fecha)} · {t.intentos} intento(s){t.usuario ? ` · ${t.usuario}` : ""}</p>
                                 </div>
                                 {data.filter((i) => i.activo && i.id !== t.impresora_id).length > 0 && (
                                     <select defaultValue="" disabled={reintentando === t.id}

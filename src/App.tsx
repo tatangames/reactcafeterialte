@@ -48,6 +48,7 @@ import ResumenProduccion from "./pages/Produccion/ResumenProduccion.tsx";
 import Gastos from "./pages/Gastos/Gastos.tsx";
 import Reportes from "./pages/Reportes/Reportes.tsx";
 import ConfiguracionNegocio from "./pages/Configuracion/Negocio/ConfiguracionNegocio.tsx";
+import ConfiguracionFel from "./pages/Configuracion/Fel/ConfiguracionFel.tsx";
 import CajasConfig from "./pages/Configuracion/Cajas/CajasConfig.tsx";
 import CajaTurno from "./pages/Caja/CajaTurno.tsx";
 import CajaCierre from "./pages/Caja/CajaCierre.tsx";
@@ -255,6 +256,9 @@ export default function App() {
                           </PermissionRoute>
                       }
                   />
+
+                  { /* FACTURACIÓN ELECTRÓNICA */}
+                  <Route path="/admin/configuracion/facturacion-electronica" element={<PermissionRoute permission="configuracion.gestionar"><ConfiguracionFel /></PermissionRoute>} />
 
                   { /* CAJAS Y FORMAS DE PAGO */}
                   <Route path="/admin/cajas/index" element={<PermissionRoute permission="configuracion.gestionar"><CajasConfig /></PermissionRoute>} />

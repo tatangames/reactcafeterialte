@@ -33,7 +33,7 @@ const AppHeader: React.FC = () => {
   }, []);
 
   return (
-      <header className="sticky top-0 flex w-full bg-white border-b border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900">
+      <header className="sticky top-0 flex w-full bg-white border-b border-gray-200 z-[999] dark:border-gray-800 dark:bg-gray-900">
         <div className="flex flex-row items-center justify-between grow px-3 py-3 lg:px-6 lg:py-4">
 
           {/* Botón hamburguesa */}

@@ -35,8 +35,9 @@ export const quitarItem = async (item: number, motivo?: string, cantidad?: numbe
 export const anularComanda = async (comanda: number, motivo: string) =>
     (await api.post(`/mesas/comandas/${comanda}/anular`, { motivo })).data as ConOrden & { impresion: ResultadoImpresion };
 
-export const enviarComanda = async (orden: number, notas?: string) =>
-    (await api.post(`/mesas/ordenes/${orden}/enviar`, { notas })).data as ConOrden & {
+// itemIds: enviar solo esos productos; sin ellos, todo lo pendiente
+export const enviarComanda = async (orden: number, notas?: string, itemIds?: number[]) =>
+    (await api.post(`/mesas/ordenes/${orden}/enviar`, { notas, item_ids: itemIds })).data as ConOrden & {
         impresion: { impresas: number; errores: string[]; sin_impresora: boolean };
         comandas: ComandaInterface[];
     };

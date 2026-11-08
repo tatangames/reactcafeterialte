@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logout } from '../../services/api';
 import { clearAuth, getToken } from '../../utils/auth';
 import { TurnoDetalleInterface } from '../../types/caja';
-import { dinero, mensajeError } from '../../utils/formato';
+import { dinero, mensajeError, fechaHora } from '../../utils/formato';
 import { ConsumoTurno, PorComprar } from '../../components/caja/PorComprar';
 
 export default function CajaCierre() {
@@ -135,7 +135,7 @@ export default function CajaCierre() {
 
             <PageHeader
                 title="Cierre de caja"
-                subtitle={`${turno.caja} · Turno #${turno.id} · abierto por ${turno.usuario_apertura} el ${turno.abierto_at}`}
+                subtitle={`${turno.caja} · Turno #${turno.id} · abierto por ${turno.usuario_apertura} el ${fechaHora(turno.abierto_at)}`}
                 backTo="/caja"
             />
 

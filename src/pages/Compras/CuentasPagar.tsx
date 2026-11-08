@@ -10,6 +10,7 @@ import { getCuentasPagar, getPagosProveedor } from '../../services/compras';
 import { dinero, fechaCorta, mensajeError } from '../../utils/formato';
 import { CuentaPagarInterface, CuentasPagarResponseInterface, PagoProveedorInterface } from '../../types/compras';
 import { PaginaInterface } from '../../types/interfaces';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 type Vista = 'pendiente' | 'vencidas' | 'pagada' | 'pagos';
 
@@ -67,6 +68,7 @@ export default function CuentasPagar() {
                                     <th className="px-4 py-3">Compras</th><th className="px-4 py-3 text-right">Monto</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
+                                {!pagos && <FilaCargando colSpan={6} />}
                                 {pagos?.pagos.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Sin pagos</td></tr>}
                                 {pagos?.pagos.map(p => (
                                     <tr key={p.id} onClick={() => navigate(`/compras/proveedores/${p.proveedor_id}`)} className={`cursor-pointer hover:bg-gray-50 ${p.anulado ? 'text-gray-400' : ''}`}>
@@ -90,6 +92,7 @@ export default function CuentasPagar() {
                                     <th className="px-4 py-3 text-right">Monto</th><th className="px-4 py-3 text-right">Saldo</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3"></th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
+                                {!cuentas && <FilaCargando colSpan={8} />}
                                 {cuentas?.cuentas.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No hay cuentas</td></tr>}
                                 {cuentas?.cuentas.map(c => (
                                     <tr key={c.id} onClick={() => navigate(`/compras/proveedores/${c.proveedor_id}`)} className="cursor-pointer hover:bg-gray-50">

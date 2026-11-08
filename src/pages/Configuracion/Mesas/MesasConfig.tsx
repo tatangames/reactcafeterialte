@@ -5,6 +5,7 @@ import PageHeader from '../../../components/common/PageHeader';
 import StatusBadge from '../../../components/common/StatusBadge';
 import FormField, { inputClass } from '../../../components/form/FormField';
 import MoneyInput from '../../../components/form/MoneyInput';
+import SelectBuscador from '../../../components/form/SelectBuscador';
 import { useCaja } from '../../../context/CajaContext';
 import {
     AreaConfigInterface, asignarCategorias, getAreasConfig, getGruposConfig, getTerminalesConfig, GrupoConfigInterface, guardarArea, guardarGrupo,
@@ -12,6 +13,7 @@ import {
 } from '../../../services/mesas';
 import { dinero, mensajeError } from '../../../utils/formato';
 import { sinTildes } from '../../../utils/texto';
+import Cargando, { FilaCargando } from '../../../components/ui/loading/Cargando';
 
 type Pestana = 'terminales' | 'areas' | 'modificadores';
 const TIPOS = { mesa: 'Mesa', caja: 'Caja de mostrador' };
@@ -39,6 +41,40 @@ function Ventana({ titulo, children, onCerrar, onGuardar, guardando, ancho = 'ma
 type OpcionForm = { id?: number; nombre: string; precio: string; producto_id: string; cantidad: string; unidad_medida_id: string };
 const opcionVacia = (): OpcionForm => ({ nombre: '', precio: '', producto_id: '', cantidad: '', unidad_medida_id: '' });
 
+// «¿Cómo funciona?» del grupo de modificadores: casillas, precio extra e insumo, con ejemplos
+function AyudaModificadores() {
+    const Bloque = ({ titulo, children }: { titulo: string; children: React.ReactNode }) => (
+        <div className="rounded-md border border-blue-100 bg-white/70 px-3 py-2">
+            <p className="font-semibold">{titulo}</p>
+            <div className="mt-1 space-y-1">{children}</div>
+        </div>
+    );
+    return (
+        <div className="space-y-2 rounded-lg bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
+            <p>Un <b>grupo</b> son las opciones que se eligen al tocar un producto en la venta o la mesa (tipo de leche, salsa, cómo van los huevos). Salen en el ticket y en la comanda debajo del producto.</p>
+            <Bloque titulo="Nombre">
+                <p>Corto, porque es lo que ve el mesero: «Salsa», «Leche», «Huevos». El producto al que aplica se elige abajo, en «Productos que lo usan» (no hace falta escribirlo en el nombre).</p>
+            </Bloque>
+            <Bloque titulo="Casillas">
+                <p><b>Obligatorio:</b> no deja agregar el producto sin elegir una opción. Ej.: «Huevos» del desayuno (estrellados, revueltos).</p>
+                <p><b>Se pueden elegir varias:</b> encendida, se marcan varias a la vez (toppings: fresas y mantequilla). Apagada, solo una (salsa: Nutella o caramelo).</p>
+            </Bloque>
+            <Bloque titulo="Precio extra (+$)">
+                <p>Lo que se <b>suma al precio</b> del producto si el cliente elige esa opción. Waffle $2.75 + Nutella (+$0.50) = <b>$3.25</b>.</p>
+                <p>En blanco o $0.00: la opción es <b>gratis</b>, el precio no cambia. Sirve para opciones que ya van incluidas o que solo son instrucciones («Sin azúcar», «Revueltos»).</p>
+            </Bloque>
+            <Bloque titulo="Insumo, cantidad y unidad">
+                <p>Lo que se <b>descuenta del inventario</b> cada vez que se vende el producto con esa opción. Nutella, 30 g: se vende un waffle con Nutella y bajan 30 g de Nutella.</p>
+                <p>Aunque la opción sea gratis, el insumo se descuenta igual y su costo se suma al costo de la venta (así la utilidad es real). Si el insumo se acaba, la opción sale «Agotado» cuando no se permite stock negativo.</p>
+                <p>«No descuenta inventario»: para instrucciones que no gastan nada.</p>
+            </Bloque>
+            <Bloque titulo="Ejemplo: grupo «Salsa» para el Waffle">
+                <p>Opcional, una sola opción. Nutella <b>+$0.50</b>, insumo Nutella 30 g · Caramelo <b>+$0.50</b>, insumo Caramelo 30 g · Sin salsa (en blanco), no descuenta inventario.</p>
+            </Bloque>
+        </div>
+    );
+}
+
 export default function MesasConfig() {
     const { catalogos } = useCaja();
     const [pestana, setPestana] = useState<Pestana>('terminales');
@@ -46,6 +82,7 @@ export default function MesasConfig() {
 
     // Terminales
     const [terminales, setTerminales] = useState<TerminalConfigInterface[]>([]);
+    const [cargado, setCargado] = useState(false);
     const [zonas, setZonas] = useState<string[]>([]);
     const [terminal, setTerminal] = useState<Partial<TerminalConfigInterface> | null>(null);
     const [arrastrando, setArrastrando] = useState<number | null>(null);
@@ -61,6 +98,7 @@ export default function MesasConfig() {
     const [productos, setProductos] = useState<{ id: number; nombre: string }[]>([]);
     const [insumos, setInsumos] = useState<InsumoModificadorInterface[]>([]);
     const [unidades, setUnidades] = useState<UnidadModificadorInterface[]>([]);
+    const [verAyudaGrupo, setVerAyudaGrupo] = useState(false);
     const [grupo, setGrupo] = useState<{
         id?: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
         opciones: OpcionForm[]; productos: number[];
@@ -68,7 +106,7 @@ export default function MesasConfig() {
     const [buscarProducto, setBuscarProducto] = useState('');
 
     const cargar = useCallback(() => {
-        getTerminalesConfig().then(r => { setTerminales(r.terminales); setZonas(r.zonas); }).catch(e => toast.error(mensajeError(e, 'Error al cargar terminales')));
+        getTerminalesConfig().then(r => { setTerminales(r.terminales); setZonas(r.zonas); }).catch(e => toast.error(mensajeError(e, 'Error al cargar terminales'))).finally(() => setCargado(true));
         getAreasConfig().then(r => { setAreas(r.areas); setImpresoras(r.impresoras); setCategorias(r.categorias); }).catch(() => null);
         getGruposConfig().then(r => { setGrupos(r.grupos); setProductos(r.productos); setInsumos(r.insumos); setUnidades(r.unidades); }).catch(() => null);
     }, []);
@@ -138,6 +176,7 @@ export default function MesasConfig() {
                                     <th className="px-4 py-3 text-right">Personas</th><th className="px-4 py-3">Estado</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
+                                {!cargado && <FilaCargando colSpan={7} />}
                                 {terminales.map((t, n) => (
                                     <tr key={t.id} onClick={() => setTerminal(t)} draggable
                                         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(t.id); }}
@@ -209,6 +248,7 @@ export default function MesasConfig() {
                         <button type="button" onClick={() => setArea({ nombre: '', color: '#7c3aed', impresora_id: null, activo: true })}
                             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nueva área</button>
                         <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+                            {!cargado && <li><Cargando /></li>}
                             {areas.map(a => (
                                 <li key={a.id} onClick={() => setArea(a)} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-gray-50">
                                     <span className="h-5 w-5 rounded-full" style={{ backgroundColor: a.color }} />
@@ -222,7 +262,7 @@ export default function MesasConfig() {
                         </ul>
                     </section>
                     <section className="space-y-3">
-                        <p className="text-sm text-gray-600">A qué área va la comanda de cada categoría. Todo sale en comanda: si el pan de vitrina lo despacha otra persona, crea un área para ella (por ejemplo, «Vitrina»).</p>
+                        <p className="text-sm text-gray-600">A qué área va la comanda de cada categoría. Lo que ya está hecho y se entrega directo (pan de vitrina, postres de vitrina, bebidas embotelladas) va en «Sin comanda»: solo sale el ticket de venta.</p>
                         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500"><tr><th className="px-4 py-3">Categoría</th><th className="px-4 py-3">Se prepara en</th></tr></thead>
@@ -231,9 +271,9 @@ export default function MesasConfig() {
                                         <tr key={c.id}>
                                             <td className="px-4 py-2 font-medium">{c.nombre}</td>
                                             <td className="px-4 py-2">
-                                                <select className={`${inputClass} !w-auto ${c.area_preparacion_id ? '' : '!border-amber-400'}`} value={c.area_preparacion_id ?? ''}
+                                                <select className={`${inputClass} !w-auto`} value={c.area_preparacion_id ?? ''}
                                                     onChange={e => setCategorias(cs => cs.map(x => x.id === c.id ? { ...x, area_preparacion_id: e.target.value ? Number(e.target.value) : null } : x))}>
-                                                    <option value="" disabled>Elegir área…</option>
+                                                    <option value="">Sin comanda (se entrega directo)</option>
                                                     {areas.filter(a => a.activo).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                                                 </select>
                                             </td>
@@ -242,10 +282,7 @@ export default function MesasConfig() {
                                 </tbody>
                             </table>
                         </div>
-                        {categorias.some(c => !c.area_preparacion_id) && (
-                            <p className="text-sm text-amber-700">Las categorías sin área salen en una comanda general hasta que les asignes una.</p>
-                        )}
-                        <button type="button" disabled={guardando || categorias.some(c => !c.area_preparacion_id)}
+                        <button type="button" disabled={guardando}
                             onClick={() => guardar(() => asignarCategorias(categorias.map(c => ({ categoria_id: c.id, area_id: c.area_preparacion_id }))), () => null)}
                             className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">Guardar áreas de las categorías</button>
                     </section>
@@ -280,7 +317,8 @@ export default function MesasConfig() {
                     <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, multiple: false, activo: true, opciones: [opcionVacia()], productos: [] })}
                         className="mb-3 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nuevo grupo</button>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {grupos.length === 0 && <p className="text-sm text-gray-500">Aún no hay modificadores. Crea grupos como «Leche», «Saborizante» o «Tamaño».</p>}
+                        {!cargado && <Cargando className="col-span-full py-10" />}
+                        {cargado && grupos.length === 0 && <p className="text-sm text-gray-500">Aún no hay modificadores. Crea grupos como «Leche», «Saborizante» o «Tamaño».</p>}
                         {grupos.map(g => (
                             <button key={g.id} type="button" onClick={() => setGrupo({
                                 id: g.id, nombre: g.nombre, obligatorio: g.obligatorio, multiple: g.multiple, activo: g.activo,
@@ -319,6 +357,14 @@ export default function MesasConfig() {
                         })),
                         productos: grupo.productos,
                     }, grupo.id), () => setGrupo(null))}>
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => setVerAyudaGrupo(v => !v)} aria-expanded={verAyudaGrupo}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${verAyudaGrupo ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600'}`}>
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-bold">?</span>
+                            ¿Cómo funciona?
+                        </button>
+                    </div>
+                    {verAyudaGrupo && <AyudaModificadores />}
                     <FormField label="Nombre" required>
                         <input className={inputClass} value={grupo.nombre} maxLength={80} autoFocus placeholder="Leche, Saborizante, Tamaño..." onChange={e => setGrupo(g => g && { ...g, nombre: e.target.value })} />
                     </FormField>
@@ -342,14 +388,16 @@ export default function MesasConfig() {
                                                 className="h-[42px] w-10 shrink-0 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Quitar opción">✕</button>
                                         </div>
                                         <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-                                            <select className={inputClass} value={o.producto_id} aria-label="Insumo que descuenta"
-                                                onChange={e => {
-                                                    const elegido = insumos.find(i => String(i.id) === e.target.value);
-                                                    cambiar({ producto_id: e.target.value, unidad_medida_id: elegido?.unidad_medida_id ? String(elegido.unidad_medida_id) : '' });
-                                                }}>
-                                                <option value="">No descuenta inventario</option>
-                                                {insumos.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
-                                            </select>
+                                            {/* Insumo con buscador: se escribe «nut» y aparece Nutella */}
+                                            <div className="min-w-0 flex-1">
+                                                <SelectBuscador value={o.producto_id ? Number(o.producto_id) : 0} placeholder="Buscar insumo que descuenta..."
+                                                    opciones={[{ value: 0, label: 'No descuenta inventario' },
+                                                        ...insumos.map(i => ({ value: i.id, label: i.unidad ? `${i.nombre} (${i.unidad})` : i.nombre }))]}
+                                                    onChange={v => {
+                                                        const elegido = v ? insumos.find(i => i.id === v) : undefined;
+                                                        cambiar({ producto_id: elegido ? String(elegido.id) : '', unidad_medida_id: elegido?.unidad_medida_id ? String(elegido.unidad_medida_id) : '' });
+                                                    }} />
+                                            </div>
                                             {o.producto_id && (
                                                 <>
                                                     <input type="number" min="0" step="any" inputMode="decimal" className={`${inputClass} !w-28 shrink-0`} placeholder="Cantidad"

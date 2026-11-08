@@ -1,5 +1,5 @@
 import { TurnoDetalleInterface } from "../../types/caja";
-import { cantidad, dinero } from "../../utils/formato";
+import { cantidad, dinero, fechaHora } from "../../utils/formato";
 
 interface Props {
     detalle: TurnoDetalleInterface;
@@ -28,9 +28,9 @@ export default function TurnoReporte({ detalle, negocio = "Panadería Eduardo" }
             </div>
 
             <hr className="my-2 border-dashed border-gray-400" />
-            <Fila etiqueta="Apertura" valor={turno.abierto_at} />
+            <Fila etiqueta="Apertura" valor={fechaHora(turno.abierto_at)} />
             <Fila etiqueta="Abrió" valor={turno.usuario_apertura ?? "—"} />
-            {turno.cerrado_at && <Fila etiqueta="Cierre" valor={turno.cerrado_at} />}
+            {turno.cerrado_at && <Fila etiqueta="Cierre" valor={fechaHora(turno.cerrado_at)} />}
             {turno.usuario_cierre && <Fila etiqueta="Cerró" valor={turno.usuario_cierre} />}
 
             <hr className="my-2 border-dashed border-gray-400" />

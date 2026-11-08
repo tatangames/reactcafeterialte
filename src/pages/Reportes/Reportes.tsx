@@ -13,7 +13,9 @@ import { exportarReporte, FiltrosReporte, FormatoColumna, getCatalogoReportes, g
 import { getCatalogoCompras, getProveedores } from '../../services/compras';
 import { getCategoriasGasto } from '../../services/gastos';
 import { hoyLocal, mensajeError } from '../../utils/formato';
+import { sinTildes } from '../../utils/texto';
 import { formatearValor } from '../../utils/reportes';
+import Cargando, { CapaCargando } from '../../components/ui/loading/Cargando';
 
 const numerico = (f: FormatoColumna) => ['dinero', 'costo', 'numero', 'porcentaje'].includes(f);
 const COLORES = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
@@ -61,6 +63,9 @@ function GraficaReporte({ reporte }: { reporte: ReporteInterface }) {
     );
 }
 
+// Reportes cortos o de resumen por día/hora: no llevan buscador
+const SIN_BUSCADOR = ['ventas_hora', 'ventas_metodo', 'resultados'];
+
 export default function Reportes() {
     const { hasPermission } = useAuth();
     const puedeExportar = hasPermission('reportes.exportar');
@@ -78,6 +83,27 @@ export default function Reportes() {
     const [productos, setProductos] = useState<{ id: number; nombre: string }[]>([]);
     const [proveedores, setProveedores] = useState<{ id: number; nombre: string }[]>([]);
     const [categoriasGasto, setCategoriasGasto] = useState<{ id: number; nombre: string }[]>([]);
+    // «Quién agregó cada producto»: la lista sale del mismo reporte sin filtrar
+    const [empleados, setEmpleados] = useState<{ id: number; nombre: string }[]>([]);
+    // Buscador del listado (se filtra aquí mismo; Excel y PDF salen completos)
+    const [buscarTabla, setBuscarTabla] = useState('');
+    const conBuscador = !!reporte && !SIN_BUSCADOR.includes(reporte.tipo) && reporte.filas.length > 0;
+    const textoBuscado = sinTildes(buscarTabla.trim());
+    const filasVisibles = !reporte ? [] : !conBuscador || !textoBuscado ? reporte.filas
+        : reporte.filas.filter(f => reporte.columnas.some(c => {
+            const v = f[c.clave];
+            return v !== null && v !== undefined && (sinTildes(String(v)).includes(textoBuscado) || sinTildes(formatearValor(v, c.formato)).includes(textoBuscado));
+        }));
+    const filtrando = !!reporte && filasVisibles.length !== reporte.filas.length;
+    // Con filtro, el total es de lo encontrado: se suman las columnas que son sumas (no %, ni promedios)
+    const totalesVisibles = !reporte?.totales ? null : !filtrando ? reporte.totales
+        : Object.fromEntries(Object.keys(reporte.totales).map(clave => {
+            const col = reporte.columnas.find(c => c.clave === clave);
+            if (!col || col.formato === 'porcentaje' || clave === 'promedio') return [clave, null];
+            // «Quién agregó»: lo cancelado o anulado (importe 0) no cuenta en la cantidad
+            const filas = reporte.tipo === 'productos_agregados' && clave === 'cantidad' ? filasVisibles.filter(f => Number(f.importe) > 0) : filasVisibles;
+            return [clave, Math.round(filas.reduce((s, f) => s + Number(f[clave] ?? 0), 0) * 10000) / 10000];
+        }));
 
     useEffect(() => { getCatalogoReportes().then(setCatalogo).catch(() => null); }, []);
 
@@ -95,7 +121,7 @@ export default function Reportes() {
         if (tipo === 'kardex' && !extra.producto_id) { setReporte(null); return; }
         setCargando(true);
         getReporte(tipo, filtros)
-            .then(setReporte)
+            .then(r => { setReporte(r); if (r.empleados && !extra.usuario_id) setEmpleados(r.empleados); })
             .catch(e => { setReporte(null); toast.error(mensajeError(e, 'No se pudo generar el reporte')); })
             .finally(() => setCargando(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,7 +162,7 @@ export default function Reportes() {
                         <div key={grupo}>
                             <p className="mb-1 px-3 text-xs font-semibold uppercase text-gray-400">{grupo}</p>
                             {reportes.map(r => (
-                                <button key={r.tipo} type="button" onClick={() => { setTipo(r.tipo); setExtra({}); }}
+                                <button key={r.tipo} type="button" onClick={() => { setTipo(r.tipo); setExtra({}); setBuscarTabla(''); }}
                                     className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${tipo === r.tipo ? 'bg-blue-600 font-medium text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                                     {r.titulo}
                                 </button>
@@ -177,6 +203,12 @@ export default function Reportes() {
                                 <option value="empaque">Empaque</option>
                             </select>
                         )}
+                        {tipo === 'productos_agregados' && (
+                            <select className={`${inputClass} !w-auto`} value={extra.usuario_id ?? ''} onChange={e => setExtra({ usuario_id: e.target.value })}>
+                                <option value="">Todos los empleados</option>
+                                {empleados.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                            </select>
+                        )}
                         {tipo === 'mermas' && (
                             <select className={`${inputClass} !w-auto`} value={extra.motivo ?? ''} onChange={e => setExtra({ motivo: e.target.value })}>
                                 <option value="">Todos los motivos</option>
@@ -189,10 +221,11 @@ export default function Reportes() {
                     </div>
 
                     {tipo === 'kardex' && !extra.producto_id && <p className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">Elige un producto para ver su kárdex</p>}
-                    {cargando && !reporte && <p className="text-gray-500">Generando...</p>}
+                    {cargando && !reporte && <Cargando texto="Generando..." />}
 
                     {reporte && (
-                        <div className={`space-y-4 ${cargando ? 'opacity-60' : ''}`}>
+                        <div className={`space-y-4 relative`}>
+                            <CapaCargando visible={cargando} />
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-800">{reporte.titulo}</h2>
                                 <p className="text-sm text-gray-500">{reporte.periodo}</p>
@@ -211,6 +244,18 @@ export default function Reportes() {
 
                             <GraficaReporte reporte={reporte} />
 
+                            {conBuscador && (
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <input className={`${inputClass} max-w-md`} value={buscarTabla} onChange={e => setBuscarTabla(e.target.value)}
+                                        placeholder="Buscar en el listado (producto, empleado, mesa, estado, fecha...)" aria-label="Buscar en el listado" />
+                                    {filtrando && (
+                                        <span className="text-sm text-gray-500">
+                                            {filasVisibles.length} de {reporte.filas.length} · <button type="button" onClick={() => setBuscarTabla('')} className="text-blue-600 hover:underline">quitar filtro</button>
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                                 <table className="w-full text-sm">
                                     <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
@@ -218,7 +263,8 @@ export default function Reportes() {
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {reporte.filas.length === 0 && <tr><td colSpan={reporte.columnas.length} className="px-4 py-8 text-center text-gray-500">Sin datos en el periodo</td></tr>}
-                                        {reporte.filas.map((f, i) => (
+                                        {reporte.filas.length > 0 && filasVisibles.length === 0 && <tr><td colSpan={reporte.columnas.length} className="px-4 py-8 text-center text-gray-500">Nada coincide con «{buscarTabla}»</td></tr>}
+                                        {filasVisibles.map((f, i) => (
                                             <tr key={i}>
                                                 {reporte.columnas.map(c => {
                                                     const v = f[c.clave];
@@ -227,12 +273,12 @@ export default function Reportes() {
                                             </tr>
                                         ))}
                                     </tbody>
-                                    {reporte.totales && reporte.filas.length > 0 && (
+                                    {totalesVisibles && filasVisibles.length > 0 && (
                                         <tfoot>
                                             <tr className="bg-gray-50 font-semibold">
                                                 {reporte.columnas.map((c, n) => (
                                                     <td key={c.clave} className={`px-3 py-3 ${numerico(c.formato) ? 'whitespace-nowrap text-right' : ''}`}>
-                                                        {n === 0 ? 'Total' : c.clave in reporte.totales! ? formatearValor(reporte.totales![c.clave], c.formato) : ''}
+                                                        {n === 0 ? (filtrando ? 'Total de lo encontrado' : 'Total') : c.clave in totalesVisibles ? formatearValor(totalesVisibles[c.clave], c.formato) : ''}
                                                     </td>
                                                 ))}
                                             </tr>

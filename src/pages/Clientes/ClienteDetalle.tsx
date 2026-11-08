@@ -16,14 +16,15 @@ import {
 } from '../../services/clientes';
 import { getVentas } from '../../services/pos';
 import { nuevoUuid } from '../../utils/cajaDispositivo';
-import { dinero, haceDias, hoyLocal, mensajeError } from '../../utils/formato';
+import { dinero, haceDias, hoyLocal, mensajeError, fechaCorta, fechaHora } from '../../utils/formato';
 import { AbonoInterface, ClienteDetalleInterface, EstadoCuentaInterface } from '../../types/clientes';
 import { VentasResponseInterface } from '../../types/pos';
+import { CargandoPagina, FilaCargando } from '../../components/ui/loading/Cargando';
 
 type Pestana = 'pendientes' | 'abonos' | 'compras' | 'estado';
 
 const tarjeta = 'rounded-xl border border-gray-200 bg-white p-4';
-const fecha = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+const fecha = (iso: string) => fechaCorta(iso);
 
 export default function ClienteDetalle() {
     const { id } = useParams();
@@ -107,7 +108,7 @@ export default function ClienteDetalle() {
             .catch(e => toast.error(mensajeError(e, 'No se pudo generar el PDF')));
     };
 
-    if (!datos) return <div className="p-6 text-gray-500">Cargando...</div>;
+    if (!datos) return <CargandoPagina />;
     const { cliente, resumen } = datos;
 
     const pestanas: { clave: Pestana; texto: string; visible: boolean }[] = [
@@ -217,7 +218,7 @@ export default function ClienteDetalle() {
                             {datos.abonos.map(a => (
                                 <tr key={a.id} className={a.anulado ? 'text-gray-400' : ''}>
                                     <td className="px-4 py-3 font-medium">{a.numero}</td>
-                                    <td className="px-4 py-3">{a.fecha}</td>
+                                    <td className="px-4 py-3">{fechaHora(a.fecha)}</td>
                                     <td className="px-4 py-3">{a.metodo}{a.referencia ? ` (${a.referencia})` : ''}</td>
                                     <td className="px-4 py-3">{a.usuario}</td>
                                     <td className={`px-4 py-3 text-right font-semibold ${a.anulado ? 'line-through' : ''}`}>{dinero(a.monto)}</td>
@@ -243,11 +244,12 @@ export default function ClienteDetalle() {
                                 <th className="px-4 py-3 text-right">Productos</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Estado</th></tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
+                            {!compras && <FilaCargando colSpan={6} />}
                             {compras?.ventas.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Sin compras registradas</td></tr>}
                             {compras?.ventas.map(v => (
                                 <tr key={v.id} className={v.estado === 'anulada' ? 'text-gray-400' : ''}>
                                     <td className="px-4 py-3 font-medium">{v.numero}</td>
-                                    <td className="px-4 py-3">{v.fecha}</td>
+                                    <td className="px-4 py-3">{fechaHora(v.fecha)}</td>
                                     <td className="px-4 py-3">{v.pagos.join(', ')}</td>
                                     <td className="px-4 py-3 text-right">{v.productos}</td>
                                     <td className="px-4 py-3 text-right font-semibold">{dinero(v.total)}</td>
@@ -284,7 +286,7 @@ export default function ClienteDetalle() {
                                         <tr className="text-gray-500"><td colSpan={5} className="px-4 py-2">Saldo anterior</td><td className="px-4 py-2 text-right">{dinero(estado.saldo_anterior)}</td></tr>
                                         {estado.movimientos.map((m, i) => (
                                             <tr key={i}>
-                                                <td className="px-4 py-3">{m.fecha}</td>
+                                                <td className="px-4 py-3">{fechaHora(m.fecha)}</td>
                                                 <td className="px-4 py-3 font-medium">{m.documento}</td>
                                                 <td className="px-4 py-3">{m.descripcion}</td>
                                                 <td className="px-4 py-3 text-right">{m.cargo > 0 ? dinero(m.cargo) : ''}</td>

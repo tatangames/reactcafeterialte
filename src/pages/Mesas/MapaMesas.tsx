@@ -6,14 +6,12 @@ import IconoMesa from '../../components/mesas/IconoMesa';
 import EstadoConexion from '../../components/pos/EstadoConexion';
 import { useAuth } from '../../context/AuthContext';
 import { getMapa } from '../../services/mesas';
-import { dinero, mensajeError } from '../../utils/formato';
+import { dinero, mensajeError, fechaHora } from '../../utils/formato';
 import { TerminalMapaInterface, transcurrido } from '../../types/mesas';
 import { sinTildes } from '../../utils/texto';
+import Cargando from '../../components/ui/loading/Cargando';
 
-const fechaHora = (f: string) => {
-    const [d, h] = f.split(' ');
-    return `${d.split('-').reverse().join('/')} ${h.slice(0, 5)}`;
-};
+
 
 function TarjetaTerminal({ t, ahora, onAbrir, onEditar }: {
     t: TerminalMapaInterface; ahora: number; onAbrir: () => void; onEditar?: () => void;
@@ -121,7 +119,7 @@ export default function MapaMesas() {
                     Mesas ocupadas {ocupadas}/{mesas.length}
                 </p>
 
-                {!terminales && <p className="text-gray-500">Cargando...</p>}
+                {!terminales && <Cargando />}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {visibles.map(t => (
                         <TarjetaTerminal key={t.id} t={t} ahora={ahora} onAbrir={() => abrir(t)}

@@ -10,6 +10,7 @@ import { getCajasConfig, getMetodosPagoConfig, guardarCaja, guardarMetodoPago } 
 import { getToken } from '../../../utils/auth';
 import { mensajeError } from '../../../utils/formato';
 import { CajaInterface, MetodoPagoInterface, TipoMetodoPago } from '../../../types/caja';
+import Cargando from '../../../components/ui/loading/Cargando';
 
 const TIPOS_METODO: Record<TipoMetodoPago, string> = {
     efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', credito: 'Crédito', otro: 'Otro',
@@ -42,6 +43,7 @@ function Modal({ titulo, children, onClose, onSave, guardando }: {
 export default function CajasConfig() {
     const { refrescar } = useCaja();
     const [cajas, setCajas] = useState<CajaInterface[]>([]);
+    const [cargado, setCargado] = useState(false);
     const [metodos, setMetodos] = useState<MetodoPagoInterface[]>([]);
     const [impresoras, setImpresoras] = useState<{ id: number; alias: string }[]>([]);
     const [cajaForm, setCajaForm] = useState<CajaForm | null>(null);
@@ -50,7 +52,7 @@ export default function CajasConfig() {
 
     const cargar = () => {
         getCajasConfig().then(setCajas).catch(() => toast.error('Error al cargar cajas'));
-        getMetodosPagoConfig().then(setMetodos).catch(() => toast.error('Error al cargar métodos de pago'));
+        getMetodosPagoConfig().then(setMetodos).catch(() => toast.error('Error al cargar métodos de pago')).finally(() => setCargado(true));
     };
 
     useEffect(() => {
@@ -155,6 +157,7 @@ export default function CajasConfig() {
                             className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">+ Nueva caja</button>
                     </div>
                     <div className="divide-y divide-gray-100">
+                        {!cargado && <Cargando />}
                         {cajas.map(c => (
                             <div key={c.id} className="flex items-center gap-3 px-5 py-3">
                                 <div className="flex-1">
@@ -179,6 +182,7 @@ export default function CajasConfig() {
                             className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg">+ Nueva forma</button>
                     </div>
                     <div className="divide-y divide-gray-100">
+                        {!cargado && <Cargando />}
                         {metodos.map(m => (
                             <div key={m.id} className="flex items-center gap-3 px-5 py-3">
                                 <div className="flex-1">

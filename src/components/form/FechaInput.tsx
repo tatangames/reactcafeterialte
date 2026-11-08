@@ -17,10 +17,10 @@ interface Props {
 }
 
 /**
- * Campo de fecha con calendario en español. Se ve "04/11/2026" pero entrega "2026-11-04",
+ * Campo de fecha con calendario en español. Se ve "04-11-2026" pero entrega "2026-11-04",
  * igual que un input type="date", así que se cambia uno por otro sin tocar nada más.
  */
-export default function FechaInput({ value, onChange, min, max, className = "", placeholder = "dd/mm/aaaa", ...rest }: Props) {
+export default function FechaInput({ value, onChange, min, max, className = "", placeholder = "dd-mm-aaaa", ...rest }: Props) {
     const ref = useRef<HTMLInputElement>(null);
     const fp = useRef<Instance | null>(null);
     const alCambiar = useRef(onChange);
@@ -34,7 +34,7 @@ export default function FechaInput({ value, onChange, min, max, className = "", 
             locale: Spanish,
             dateFormat: "Y-m-d",
             altInput: true,
-            altFormat: "d/m/Y",
+            altFormat: "d-m-Y",
             altInputClass: "",
             allowInput: true,
             disableMobile: true,

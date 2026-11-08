@@ -7,10 +7,11 @@ import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import { inputClass } from '../../components/form/FormField';
 import { getCartera } from '../../services/clientes';
-import { dinero, mensajeError } from '../../utils/formato';
+import { dinero, mensajeError, fechaCorta } from '../../utils/formato';
 import { CarteraResponseInterface } from '../../types/clientes';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
-const fecha = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+const fecha = (iso: string) => fechaCorta(iso);
 
 const tramos = [
     { clave: 'por_vencer', texto: 'Por vencer' },
@@ -77,6 +78,7 @@ export default function CuentasCobrar() {
                             <th className="px-4 py-3">Vence</th><th className="px-4 py-3 text-right">Monto</th><th className="px-4 py-3 text-right">Saldo</th><th className="px-4 py-3">Estado</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!datos && <FilaCargando colSpan={7} />}
                         {datos?.cuentas.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No hay cuentas</td></tr>}
                         {datos?.cuentas.map(c => (
                             <tr key={c.id} onClick={() => navigate(`/clientes/${c.cliente_id}`)} className="cursor-pointer hover:bg-gray-50">

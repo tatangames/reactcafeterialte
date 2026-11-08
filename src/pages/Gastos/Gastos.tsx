@@ -17,6 +17,7 @@ import {
 } from '../../services/gastos';
 import { dinero, fechaCorta, hoyLocal, mensajeError } from '../../utils/formato';
 import { PaginaInterface } from '../../types/interfaces';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 type Vista = 'gastos' | 'resumen' | 'categorias';
 const inicioMes = () => hoyLocal().slice(0, 8) + '01';
@@ -217,7 +218,7 @@ export default function Gastos() {
                                 <th className="px-4 py-3">Pago</th><th className="px-4 py-3 text-right">Monto</th></tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {!datos && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>}
+                            {!datos && <FilaCargando colSpan={6} />}
                             {datos?.gastos.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No hay gastos en el periodo</td></tr>}
                             {datos?.gastos.map(g => (
                                 <tr key={g.id} onClick={() => setDetalle(g)} className={`cursor-pointer hover:bg-gray-50 ${g.anulado ? 'text-gray-400' : ''}`}>

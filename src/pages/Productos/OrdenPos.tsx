@@ -5,6 +5,7 @@ import PageHeader from "../../components/common/PageHeader";
 import { STORAGE_URL } from "../../services/api";
 import { getOrdenPos, guardarOrdenPos, OrdenPosResponse, ProductoOrdenPosInterface, vecinosEnPos } from "../../services/ordenPos";
 import { dinero, mensajeError } from "../../utils/formato";
+import Cargando from '../../components/ui/loading/Cargando';
 
 // Ordenar los botones del POS arrastrando, por categoría (como se ven al vender)
 export default function OrdenPos() {
@@ -87,6 +88,7 @@ export default function OrdenPos() {
                 </button>
             </div>
 
+            {!datos && <Cargando texto="Cargando productos..." />}
             {datos && lista.length === 0 && (
                 <p className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">No hay productos a la venta en esta categoría.</p>
             )}

@@ -26,7 +26,7 @@ import { montoDescuento } from '../../utils/carrito';
 import { nuevoUuid } from '../../utils/cajaDispositivo';
 import { imprimirConRespaldo } from '../../utils/imprimir';
 import { imprimirComandasNavegador } from '../../utils/imprimirComandas';
-import { cantidad, dinero, mensajeError } from '../../utils/formato';
+import { cantidad, dinero, mensajeError, fechaHora } from '../../utils/formato';
 import { ConfiguracionNegocioInterface } from '../../types/interfaces';
 import {
     CatalogoMesasInterface, ComandaInterface, ESTADOS_COMANDA, ESTADOS_ITEM, ItemOrdenInterface, OrdenInterface, ProductoMesaInterface,
@@ -34,6 +34,8 @@ import {
 } from '../../types/mesas';
 import { DescuentoInterface, PagoFormInterface, VentaInterface } from '../../types/pos';
 import { sinTildes } from '../../utils/texto';
+import { useAuth } from '../../context/AuthContext';
+import Cargando from '../../components/ui/loading/Cargando';
 
 type Pestana = 'productos' | 'cuentas' | 'comandas';
 
@@ -49,6 +51,8 @@ export default function TerminalMesa() {
     const navigate = useNavigate();
     const { cajaId, catalogos, actual, refrescar } = useCaja();
     const { enLinea } = useConexion();
+    const { hasPermission } = useAuth();
+    const verExistencias = hasPermission('pos.ver_existencias');
 
     const [terminal, setTerminal] = useState<{ id: number; nombre: string; tipo: string; capacidad: number } | null>(null);
     const [orden, setOrden] = useState<OrdenInterface | null>(null);
@@ -160,13 +164,24 @@ export default function TerminalMesa() {
         if (res) toast.success(`${producto.nombre} agregado a ${activo?.nombre ?? 'la cuenta'}`, { duration: 2000 });
     };
 
-    const tocarProducto = (p: ProductoMesaInterface) => (p.grupos.length > 0 ? setConExtras(p) : agregar(p));
+    // Sin stock negativo: lo que no hay (o un plato cuyos ingredientes no alcanzan) no se agrega
+    const agotadoMesa = (p: ProductoMesaInterface) => catalogo?.permitir_stock_negativo === false
+        && ((p.disponible !== null && p.disponible <= 0) || (p.alcanza !== null && p.alcanza <= 0));
+    const tocarProducto = (p: ProductoMesaInterface) => {
+        if (agotadoMesa(p)) {
+            toast.error(p.disponible !== null ? `No hay existencia de ${p.nombre}` : `No alcanzan los ingredientes para ${p.nombre}`);
+            return;
+        }
+        if (p.grupos.length > 0) setConExtras(p); else agregar(p);
+    };
 
     // ── Envío a cocina ────────────────────────────────────────
-    const enviar = async () => {
+    // itemIds: solo los seleccionados (la coca ya, el café después)
+    const enviar = async (itemIds?: number[]) => {
         if (!orden) return;
-        const res = await ejecutar(() => enviarComanda(orden.id), 'No se pudo enviar');
+        const res = await ejecutar(() => enviarComanda(orden.id, undefined, itemIds), 'No se pudo enviar');
         if (!res) return;
+        if (itemIds) setSeleccion([]);
         toast.success(res.message ?? 'Enviado');
         // Un ticket por área: si la térmica no está o falló, salen desde el navegador
         if (res.impresion.errores.length) toast.error(`No se imprimió: ${[...new Set(res.impresion.errores)].join(' · ')}. Sale por el navegador.`, { duration: 6000 });
@@ -222,6 +237,7 @@ export default function TerminalMesa() {
     const seleccionados = itemsTodos.filter(i => seleccion.includes(i.id));
     const totalSeleccion = Math.round(seleccionados.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
     const entregables = seleccionados.filter(i => ['enviado', 'en_preparacion', 'listo'].includes(i.estado));
+    const porEnviarSeleccion = seleccionados.filter(i => i.estado === 'pendiente');
 
     // ── Cobro ─────────────────────────────────────────────────
     const abrirCobro = (destino: { total: number; ticket_id?: number; item_ids?: number[] }) => {
@@ -297,7 +313,7 @@ export default function TerminalMesa() {
         setTimeout(() => { window.print(); setPrecuenta(null); }, 100);
     };
 
-    if (!cargado) return <div className="flex min-h-screen items-center justify-center bg-gray-100 text-gray-500">Cargando...</div>;
+    if (!cargado) return <div className="flex min-h-screen items-center justify-center bg-gray-100"><Cargando texto="Cargando mesa..." /></div>;
 
     // ── Mesa libre ────────────────────────────────────────────
     if (!orden) {
@@ -386,11 +402,11 @@ export default function TerminalMesa() {
                                 </div>
                             </div>
                             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-                                {!catalogo && <p className="p-6 text-center text-gray-500">Cargando productos...</p>}
+                                {!catalogo && <Cargando texto="Cargando productos..." />}
                                 <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
                                     {productosVisibles.map(p => (
                                         <button key={p.id} type="button" onClick={() => tocarProducto(p)} disabled={ocupado || !activo}
-                                            className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97] disabled:opacity-60"
+                                            className={`flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97] disabled:opacity-60 ${agotadoMesa(p) ? 'opacity-50' : ''}`}
                                             style={{ borderTop: `6px solid ${p.color || '#a21caf'}` }}>
                                             <div className="relative h-20 w-full bg-gray-50">
                                                 {p.imagen
@@ -400,7 +416,20 @@ export default function TerminalMesa() {
                                             </div>
                                             <div className="flex flex-1 flex-col justify-between p-2.5">
                                                 <p className="line-clamp-2 text-sm font-medium leading-tight text-gray-800">{p.nombre}</p>
-                                                <p className="mt-1 text-base font-bold text-blue-700">{dinero(p.precio)}</p>
+                                                <div className="mt-1 flex items-end justify-between gap-1">
+                                                    <p className="text-base font-bold text-blue-700">{dinero(p.precio)}</p>
+                                                    {p.disponible === null && agotadoMesa(p) && (
+                                                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">Agotado</span>
+                                                    )}
+                                                    {p.disponible !== null && (verExistencias || p.disponible <= 0) && (
+                                                        <span title={p.disponible !== p.stock ? `Existencia ${cantidad(p.stock)}; el resto está en otras cuentas abiertas` : 'Existencia'}
+                                                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                                                p.disponible <= 0 ? 'bg-red-600 text-white' : p.bajo_minimo ? 'bg-amber-400 text-gray-900' : 'bg-gray-100 text-gray-700'
+                                                            }`}>
+                                                            {verExistencias ? cantidad(p.disponible, p.permite_fraccion ? p.unidad : null) : 'Agotado'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </button>
                                     ))}
@@ -414,6 +443,12 @@ export default function TerminalMesa() {
                             {seleccion.length > 0 && (
                                 <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-blue-50 p-3 text-sm">
                                     <span className="font-semibold text-blue-900">{seleccion.length} seleccionado(s) · {dinero(totalSeleccion)}</span>
+                                    {porEnviarSeleccion.length > 0 && (
+                                        <button type="button" disabled={ocupado} onClick={() => enviar(porEnviarSeleccion.map(i => i.id))}
+                                            className="rounded-lg bg-amber-500 px-3 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-50">
+                                            Enviar solo {porEnviarSeleccion.length === seleccion.length ? 'estos' : `${porEnviarSeleccion.length} sin enviar`}
+                                        </button>
+                                    )}
                                     <span className="text-blue-800">Mover a:</span>
                                     {abiertas.map(t => (
                                         <button key={t.id} type="button" disabled={ocupado} onClick={() => ejecutar(() => moverItems(orden.id, seleccion, t.id), 'No se pudo mover')}
@@ -495,7 +530,7 @@ export default function TerminalMesa() {
                                         <header className="px-4 py-2 text-white" style={{ backgroundColor: c.color }}>
                                             <div className="flex justify-between font-semibold"><span>#{c.numero}</span><span>{c.area ?? 'General'}</span></div>
                                             <div className="flex justify-between text-xs opacity-90">
-                                                <span>{c.enviada_at.slice(0, 16).split(' ').map((p, n) => n === 0 ? p.split('-').reverse().join('/') : p).join(' ')}</span>
+                                                <span>{fechaHora(c.enviada_at)}</span>
                                                 <span className="font-mono">{c.estado === 'entregada' || c.estado === 'cancelada' ? '—' : transcurrido(c.enviada_at, ahora)}</span>
                                             </div>
                                         </header>
@@ -576,7 +611,7 @@ export default function TerminalMesa() {
                                         {(i.texto_ajustes ?? []).length > 0 && <p className="text-xs font-semibold text-red-700">{i.texto_ajustes.map(t => `! ${t}`).join(' · ')}</p>}
                                         {i.notas && <p className="text-xs italic text-gray-500">{i.notas}</p>}
                                         {i.estado === 'cancelado' && i.motivo_cancelacion && <p className="text-xs text-red-600">Cancelado: {i.motivo_cancelacion}</p>}
-                                        <div className="mt-1 flex items-center gap-2"><ChipEstado item={i} /><span className="text-xs text-gray-400">{i.hora}</span></div>
+                                        <div className="mt-1 flex items-center gap-2"><ChipEstado item={i} /><span className="text-xs text-gray-400">{i.hora}{i.usuario ? ` · agregó ${i.usuario}` : ''}</span></div>
                                     </div>
                                     <p className="whitespace-nowrap font-semibold">{dinero(i.subtotal)}</p>
                                 </div>
@@ -625,7 +660,7 @@ export default function TerminalMesa() {
                         <p className="text-right text-xs text-gray-500">Mesa completa: {dinero(orden.totales.total)} · cobrado {dinero(orden.totales.cobrado)}</p>
                         <div className="grid grid-cols-2 gap-2">
                             {orden.totales.por_enviar > 0 && (
-                                <button type="button" onClick={enviar} disabled={ocupado} className="col-span-2 rounded-xl bg-amber-500 py-4 text-lg font-bold text-white hover:bg-amber-600 disabled:opacity-50">
+                                <button type="button" onClick={() => enviar()} disabled={ocupado} className="col-span-2 rounded-xl bg-amber-500 py-4 text-lg font-bold text-white hover:bg-amber-600 disabled:opacity-50">
                                     Enviar a cocina ({orden.totales.por_enviar})
                                 </button>
                             )}

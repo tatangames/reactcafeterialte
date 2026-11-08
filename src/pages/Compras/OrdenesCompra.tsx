@@ -19,6 +19,8 @@ import {
     ESTADOS_ORDEN, OrdenCompraInterface, ProductoCompraInterface, ProveedorInterface, UnidadCompraInterface,
 } from '../../types/compras';
 import { PaginaInterface } from '../../types/interfaces';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
+import LoadingModal from '../../components/Loading/LoadingModal';
 
 const FILTROS = [
     ['borrador,enviada,parcial', 'Abiertas'],
@@ -32,6 +34,7 @@ export default function OrdenesCompra() {
     const { hasPermission } = useAuth();
     const puedeGestionar = hasPermission('compras.gestionar');
 
+    const [abriendo, setAbriendo] = useState(false);
     const [filtro, setFiltro] = useState<string>(FILTROS[0][0]);
     const [pagina, setPagina] = useState(1);
     const [datos, setDatos] = useState<(PaginaInterface & { ordenes: OrdenCompraInterface[] }) | null>(null);
@@ -58,7 +61,11 @@ export default function OrdenesCompra() {
         }
     }, [puedeGestionar]);
 
-    const abrir = (id: number) => getOrden(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la orden')));
+    const abrir = (id: number) => {
+        setAbriendo(true);
+        getOrden(id).then(setDetalle).catch(e => toast.error(mensajeError(e, 'No se pudo abrir la orden')))
+            .finally(() => setAbriendo(false));
+    }
 
     const editar = (orden: OrdenCompraInterface | null) => {
         setForm(orden
@@ -110,6 +117,7 @@ export default function OrdenesCompra() {
 
     return (
         <div className="p-6">
+            <LoadingModal isOpen={abriendo} text="Abriendo orden..." />
             <MotivoModal isOpen={!!motivoDe} titulo={motivoDe === 'cerrar' ? `Cerrar orden ${detalle?.numero}` : `Cancelar orden ${detalle?.numero}`}
                 descripcion={motivoDe === 'cerrar' ? 'Lo que falta por recibir ya no se espera. La orden queda como recibida.' : 'La orden queda cancelada.'}
                 textoConfirmar={motivoDe === 'cerrar' ? 'Cerrar orden' : 'Cancelar orden'} isLoading={guardando}
@@ -235,6 +243,7 @@ export default function OrdenesCompra() {
                             <th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Estado</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!datos && <FilaCargando colSpan={6} />}
                         {datos?.ordenes.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No hay órdenes</td></tr>}
                         {datos?.ordenes.map(o => (
                             <tr key={o.id} onClick={() => abrir(o.id)} className="cursor-pointer hover:bg-gray-50">

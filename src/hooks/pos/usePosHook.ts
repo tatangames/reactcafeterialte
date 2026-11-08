@@ -116,21 +116,28 @@ export function usePosHook() {
     }, [catalogo, busqueda, categoria]);
 
     // ── Carrito ────────────────────────────────────────────────
-    // Sin stock negativo (Datos del negocio) no se agrega más de lo que hay en existencia
+    // Sin stock negativo (Datos del negocio) no se agrega más de lo que hay: la existencia del
+    // producto o, si sale de su receta, los platos que alcanzan con sus insumos
+    const limite = (producto: ProductoPosInterface): number | null =>
+        producto.controla_stock ? (producto.stock ?? 0) : (producto.alcanza ?? null);
+
     const cabe = (producto: ProductoPosInterface, nuevo: number, sinContar?: string): boolean => {
-        if (!producto.controla_stock || catalogo?.permitir_stock_negativo !== false) return true;
+        const hay = limite(producto);
+        if (hay === null || catalogo?.permitir_stock_negativo !== false) return true;
         const enVenta = carrito.lineas.filter((l) => l.producto.id === producto.id && claveDe(l) !== sinContar)
             .reduce((t, l) => t + l.cantidad, 0);
-        const hay = producto.stock ?? 0;
         if (enVenta + nuevo <= hay + 0.0001) return true;
+        const deReceta = !producto.controla_stock;
         toast.error(hay <= 0
-            ? `No hay existencia de ${producto.nombre}`
-            : `Solo hay ${hay} de ${producto.nombre}${enVenta > 0 ? ` (ya tienes ${enVenta} en esta venta)` : ''}`);
+            ? (deReceta ? `No alcanzan los ingredientes para ${producto.nombre}` : `No hay existencia de ${producto.nombre}`)
+            : `${deReceta ? 'Solo alcanzan' : 'Solo hay'} ${hay} de ${producto.nombre}${enVenta > 0 ? ` (ya tienes ${enVenta} en esta venta)` : ''}`);
         return false;
     };
 
-    const agotado = (producto: ProductoPosInterface) =>
-        producto.controla_stock && catalogo?.permitir_stock_negativo === false && (producto.stock ?? 0) <= 0;
+    const agotado = (producto: ProductoPosInterface) => {
+        const hay = limite(producto);
+        return hay !== null && catalogo?.permitir_stock_negativo === false && hay <= 0;
+    };
 
     // Precio y nombres de los extras elegidos, con los datos del catálogo
     const conExtras = (producto: ProductoPosInterface, modificadores: number[]) => {

@@ -20,9 +20,11 @@ import { STORAGE_URL } from '../../services/api';
 import { LineaCarritoInterface, ProductoPosInterface } from '../../types/pos';
 import { cantidad, dinero } from '../../utils/formato';
 import { claveDe, precioDe } from '../../utils/carrito';
+import Cargando from '../../components/ui/loading/Cargando';
 
-function TarjetaProducto({ producto, bloqueado, onClick }: { producto: ProductoPosInterface; bloqueado: boolean; onClick: () => void }) {
-    const agotado = producto.controla_stock && (producto.stock ?? 0) <= 0;
+function TarjetaProducto({ producto, bloqueado, verExistencia, onClick }: { producto: ProductoPosInterface; bloqueado: boolean; verExistencia: boolean; onClick: () => void }) {
+    // bloqueado: sin stock negativo, no hay existencia o no alcanzan los ingredientes de su receta
+    const agotado = bloqueado || (producto.controla_stock && (producto.stock ?? 0) <= 0);
     return (
         <button type="button" onClick={onClick}
             className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97] ${bloqueado ? 'opacity-50' : ''}`}
@@ -31,7 +33,8 @@ function TarjetaProducto({ producto, bloqueado, onClick }: { producto: ProductoP
                 {producto.imagen
                     ? <img src={STORAGE_URL + producto.imagen} alt="" className="h-full w-full object-cover" loading="lazy" />
                     : <div className="flex h-full items-center justify-center text-3xl" style={{ color: producto.color || '#D1D5DB' }}>●</div>}
-                {producto.controla_stock && (
+                {/* Sin el permiso pos.ver_existencias solo se avisa lo agotado, no la cantidad */}
+                {((producto.controla_stock && verExistencia) || agotado) && (
                     <span className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                         agotado ? 'bg-red-600 text-white' : producto.bajo_minimo ? 'bg-amber-400 text-gray-900' : 'bg-white/90 text-gray-700'
                     }`}>
@@ -188,13 +191,13 @@ export default function PosPage() {
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-                        {pos.cargando && <p className="p-6 text-center text-gray-500">Cargando productos...</p>}
+                        {pos.cargando && <Cargando texto="Cargando productos..." />}
                         {!pos.cargando && pos.productosVisibles.length === 0 && (
                             <p className="p-6 text-center text-gray-500">No hay productos {pos.busqueda ? 'con esa búsqueda' : 'en esta categoría'}</p>
                         )}
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
                             {pos.productosVisibles.map((p) => (
-                                <TarjetaProducto key={p.id} producto={p} bloqueado={pos.agotado(p)} onClick={() => tocarProducto(p)} />
+                                <TarjetaProducto key={p.id} producto={p} bloqueado={pos.agotado(p)} verExistencia={hasPermission('pos.ver_existencias')} onClick={() => tocarProducto(p)} />
                             ))}
                         </div>
                     </div>
@@ -262,6 +265,7 @@ export default function PosPage() {
                 metodos={pos.metodosPago}
                 isLoading={pos.guardando}
                 onCancel={() => pos.setCobrando(false)}
+                onAnular={() => { pos.setCobrando(false); pos.vaciar(); }}
                 onConfirm={pos.cobrar}
             />
 

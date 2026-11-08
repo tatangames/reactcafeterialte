@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getProveedores } from '../../services/compras';
 import { dinero, mensajeError } from '../../utils/formato';
 import { ProveedorInterface } from '../../types/compras';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 export default function Proveedores() {
     const navigate = useNavigate();
@@ -60,7 +61,7 @@ export default function Proveedores() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {!proveedores && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>}
+                        {!proveedores && <FilaCargando colSpan={6} />}
                         {proveedores?.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No hay proveedores</td></tr>}
                         {proveedores?.map(p => (
                             <tr key={p.id} onClick={() => navigate(`/compras/proveedores/${p.id}`)} className="cursor-pointer hover:bg-gray-50">

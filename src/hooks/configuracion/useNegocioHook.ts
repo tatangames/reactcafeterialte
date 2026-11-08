@@ -21,6 +21,7 @@ const initialForm: ConfiguracionNegocioFormInterface = {
     permitir_stock_negativo: true,
     descuento_max_sin_autorizacion: "10",
     cierre_ciego: false,
+    aviso_cambio: true,
     mensaje_ticket: "",
     logo: null,
 };
@@ -41,6 +42,7 @@ const aFormulario = (c: ConfiguracionNegocioInterface): ConfiguracionNegocioForm
     permitir_stock_negativo: c.permitir_stock_negativo,
     descuento_max_sin_autorizacion: String(Number(c.descuento_max_sin_autorizacion)),
     cierre_ciego: c.cierre_ciego,
+    aviso_cambio: c.aviso_cambio ?? true,
     mensaje_ticket: c.mensaje_ticket ?? "",
     logo: null,
 });

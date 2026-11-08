@@ -7,6 +7,7 @@ import { getMatrizRol, guardarMatrizRol, MatrizRolInterface } from '../../servic
 import { mensajeError } from '../../utils/formato';
 import { sinTildes } from '../../utils/texto';
 import Interruptor from '../../components/form/Interruptor';
+import { CargandoPagina } from '../../components/ui/loading/Cargando';
 
 // Permisos de un rol: un interruptor por módulo (enciende o apaga todo) y uno por acción
 export default function RolesPermisos() {
@@ -15,6 +16,13 @@ export default function RolesPermisos() {
     const [marcados, setMarcados] = useState<Set<string>>(new Set());
     const [original, setOriginal] = useState<Set<string>>(new Set());
     const [buscar, setBuscar] = useState('');
+    // Permisos con la explicación desplegada (botón «?»)
+    const [conAyuda, setConAyuda] = useState<Set<string>>(new Set());
+    const verAyuda = (nombre: string) => setConAyuda(s => {
+        const n = new Set(s);
+        if (n.has(nombre)) n.delete(nombre); else n.add(nombre);
+        return n;
+    });
     const [guardando, setGuardando] = useState(false);
 
     useEffect(() => {
@@ -34,7 +42,7 @@ export default function RolesPermisos() {
 
     const texto = sinTildes(buscar.trim());
     const modulos = (matriz?.modulos ?? [])
-        .map(g => ({ ...g, permisos: g.permisos.filter(p => !texto || sinTildes(p.descripcion).includes(texto) || p.nombre.includes(texto) || sinTildes(g.modulo).includes(texto)) }))
+        .map(g => ({ ...g, permisos: g.permisos.filter(p => !texto || sinTildes(p.descripcion).includes(texto) || sinTildes(p.ayuda ?? '').includes(texto) || p.nombre.includes(texto) || sinTildes(g.modulo).includes(texto)) }))
         .filter(g => g.permisos.length > 0);
 
     const alternar = (nombre: string) => setMarcados(m => {
@@ -63,7 +71,7 @@ export default function RolesPermisos() {
         }
     };
 
-    if (!matriz) return <div className="p-6 text-gray-500">Cargando...</div>;
+    if (!matriz) return <CargandoPagina />;
     const soloLectura = matriz.rol.es_admin;
 
     return (
@@ -121,13 +129,28 @@ export default function RolesPermisos() {
                             </header>
                             <ul className="divide-y divide-gray-50">
                                 {g.permisos.map(p => (
-                                    <li key={p.nombre} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                                        <span className="min-w-0">
-                                            <span className="block text-sm text-gray-800">{p.descripcion}</span>
-                                            <span className="block text-xs text-gray-400">{p.nombre}</span>
-                                        </span>
-                                        <Interruptor encendido={marcados.has(p.nombre)} deshabilitado={soloLectura}
-                                            etiqueta={p.descripcion} onCambiar={() => alternar(p.nombre)} />
+                                    <li key={p.nombre} className="px-4 py-2.5">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="flex min-w-0 items-start gap-2">
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm text-gray-800">{p.descripcion}</span>
+                                                    <span className="block text-xs text-gray-400">{p.nombre}</span>
+                                                </span>
+                                                {p.ayuda && (
+                                                    <button type="button" onClick={() => verAyuda(p.nombre)}
+                                                        aria-expanded={conAyuda.has(p.nombre)} aria-label={`Qué hace: ${p.descripcion}`}
+                                                        title="¿Qué hace este permiso?"
+                                                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
+                                                            conAyuda.has(p.nombre) ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-600'
+                                                        }`}>?</button>
+                                                )}
+                                            </span>
+                                            <Interruptor encendido={marcados.has(p.nombre)} deshabilitado={soloLectura}
+                                                etiqueta={p.descripcion} onCambiar={() => alternar(p.nombre)} />
+                                        </div>
+                                        {p.ayuda && conAyuda.has(p.nombre) && (
+                                            <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-900">{p.ayuda}</p>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

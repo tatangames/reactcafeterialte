@@ -4,7 +4,7 @@ import TicketVenta from "./TicketVenta";
 import { useAuth } from "../../context/AuthContext";
 import { useConexion } from "../../context/ConexionContext";
 import { VentaInterface } from "../../types/pos";
-import { dinero } from "../../utils/formato";
+import { dinero, fechaHora } from "../../utils/formato";
 
 // Indicador de conexión del POS: en línea, sin conexión con ventas pendientes, sincronizando o con errores
 export default function EstadoConexion({ compacto = false }: { compacto?: boolean }) {
@@ -56,7 +56,7 @@ export default function EstadoConexion({ compacto = false }: { compacto?: boolea
                             {cola.map((v) => (
                                 <div key={v.uuid} className="flex items-center gap-3 px-6 py-3">
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-medium text-gray-800">{v.payload.numero_provisional} · {v.ticket.fecha}</p>
+                                        <p className="text-sm font-medium text-gray-800">{v.payload.numero_provisional} · {fechaHora(v.ticket.fecha)}</p>
                                         <p className="text-xs text-gray-500">{v.ticket.detalles.length} producto(s) · {v.ticket.usuario}</p>
                                         {v.estado === "error" && <p className="text-xs text-red-600">{v.error} ({v.intentos} intento(s))</p>}
                                     </div>

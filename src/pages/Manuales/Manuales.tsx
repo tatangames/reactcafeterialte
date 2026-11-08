@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getManuales, ManualInterface, ModuloManualInterface, textoManual } from '../../services/manuales';
 import { mensajeError } from '../../utils/formato';
 import { sinTildes } from '../../utils/texto';
+import { CargandoPagina } from '../../components/ui/loading/Cargando';
 
 // Un color por módulo, para que las tarjetas se reconozcan de un vistazo
 const COLORES: Record<string, string> = {
@@ -37,7 +38,7 @@ export default function Manuales() {
     const puedeUsar = (m: ManualInterface) => !m.permisos.length || hasAnyPermission(m.permisos);
 
     if (error) return <div className="p-6 text-red-600">{error}</div>;
-    if (!modulos) return <div className="p-6 text-gray-500">Cargando manuales…</div>;
+    if (!modulos) return <CargandoPagina texto="Cargando manuales..." />;
 
     const todos = modulos.flatMap(mo => mo.manuales.map(m => ({ ...m, modulo: mo.id })));
     const manual = id ? todos.find(m => m.id === id) : undefined;

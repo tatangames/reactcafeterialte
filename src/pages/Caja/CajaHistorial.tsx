@@ -9,7 +9,8 @@ import StatusBadge from '../../components/common/StatusBadge';
 import { useCaja } from '../../context/CajaContext';
 import { getHistorialTurnos } from '../../services/caja';
 import { HistorialTurnosResponseInterface } from '../../types/caja';
-import { dinero, haceDias, hoyLocal, mensajeError } from '../../utils/formato';
+import { dinero, haceDias, hoyLocal, mensajeError, fechaHora } from '../../utils/formato';
+import { CapaCargando, FilaCargando } from '../../components/ui/loading/Cargando';
 
 const selectClass = 'h-[42px] rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none';
 
@@ -69,7 +70,8 @@ export default function CajaHistorial() {
                 </div>
             )}
 
-            <div className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto ${loading ? 'opacity-60' : ''}`}>
+            <div className={`rounded-xl border border-gray-200 bg-white shadow-sm overflow-x-auto relative`}>
+                <CapaCargando visible={loading && !!datos} />
                 <table className="w-full min-w-[860px] text-sm">
                     <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                         <tr>
@@ -84,6 +86,7 @@ export default function CajaHistorial() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!datos && <FilaCargando colSpan={8} />}
                         {datos?.turnos.length === 0 && (
                             <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-500">No hay turnos en el período</td></tr>
                         )}
@@ -93,10 +96,10 @@ export default function CajaHistorial() {
                                     <div className="font-medium text-gray-800">#{t.id} · {t.caja}</div>
                                     {t.estado === 'abierto' && <StatusBadge tone="success">Abierto</StatusBadge>}
                                 </td>
-                                <td className="px-4 py-3"><div className="font-medium text-gray-800">{t.usuario_apertura}</div><div className="text-xs text-gray-500">{t.abierto_at}</div></td>
+                                <td className="px-4 py-3"><div className="font-medium text-gray-800">{t.usuario_apertura}</div><div className="text-xs text-gray-500">{fechaHora(t.abierto_at)}</div></td>
                                 <td className="px-4 py-3">
                                     {t.cerrado_at
-                                        ? <><div className="font-medium text-gray-800">{t.usuario_cierre}</div><div className="text-xs text-gray-500">{t.cerrado_at}</div></>
+                                        ? <><div className="font-medium text-gray-800">{t.usuario_cierre}</div><div className="text-xs text-gray-500">{fechaHora(t.cerrado_at)}</div></>
                                         : <span className="text-gray-400">En curso</span>}
                                 </td>
                                 <td className="px-4 py-3 text-right">{t.estado === 'cerrado' ? dinero(t.total_ventas) : '—'}</td>

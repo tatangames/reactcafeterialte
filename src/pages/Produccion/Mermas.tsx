@@ -14,6 +14,7 @@ import { nuevoUuid } from '../../utils/cajaDispositivo';
 import { cantidad, dinero, fechaCorta, hoyLocal, mensajeError } from '../../utils/formato';
 import { CatalogoProduccionInterface, MermaInterface, MotivoMerma } from '../../types/produccion';
 import { sinTildes } from '../../utils/texto';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 interface Fila { cantidad: string; motivo: MotivoMerma; detalle: string; uuid: string }
 type Vista = 'venta' | 'materia' | 'todo' | 'con_merma';
@@ -176,7 +177,7 @@ export default function Mermas() {
                                     <th className="px-3 py-2 w-48">Motivo</th><th className="px-3 py-2">Detalle</th><th className="px-3 py-2 text-right">Costo</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {!catalogo && <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-500">Cargando...</td></tr>}
+                                {!catalogo && <FilaCargando colSpan={6} />}
                                 {catalogo && productos.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-500">
                                     {texto ? 'Ningún producto de esta lista coincide: elige uno de la búsqueda para agregarlo' : vista === 'con_merma' ? 'Todavía no escribiste ninguna merma' : 'No hay productos con existencia en este grupo'}
                                 </td></tr>}
@@ -230,6 +231,7 @@ export default function Mermas() {
                             <th className="px-4 py-3">Motivo</th><th className="px-4 py-3">Registró</th><th className="px-4 py-3 text-right">Costo</th><th></th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                        {!mermas && <FilaCargando colSpan={7} />}
                         {mermas?.mermas.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Sin mermas en el periodo</td></tr>}
                         {mermas?.mermas.map(m => (
                             <tr key={m.id} className={m.anulada ? 'text-gray-400' : ''}>

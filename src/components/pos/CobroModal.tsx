@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import NumericKeypad, { aplicarTecla } from "./NumericKeypad";
+import { useCaja } from "../../context/CajaContext";
+import { getTurnoActual } from "../../services/caja";
 import { MetodoPagoInterface } from "../../types/caja";
 import { PagoFormInterface } from "../../types/pos";
 import { redondear, sugerenciasEfectivo } from "../../utils/carrito";
@@ -17,10 +19,12 @@ interface Props {
     isLoading: boolean;
     onCancel: () => void;
     onConfirm: (pagos: PagoFormInterface[]) => void;
+    // Sin cambio en la gaveta: descartar la venta (venta rápida vacía el carrito). Sin esto, solo cierra sin cobrar
+    onAnular?: () => void;
 }
 
 // Cobro: efectivo con billetes rápidos, tarjeta, transferencia o pago combinado
-export default function CobroModal({ isOpen, total, metodos, cliente = null, enLinea = true, anticipo = 0, isLoading, onCancel, onConfirm }: Props) {
+export default function CobroModal({ isOpen, total, metodos, cliente = null, enLinea = true, anticipo = 0, isLoading, onCancel, onConfirm, onAnular }: Props) {
     const conCredito = !!cliente && cliente.limite_credito > 0 && enLinea;
     const disponibles = useMemo(
         () => metodos.filter((m) => m.activo && (m.tipo !== "credito" || conCredito)),
@@ -34,9 +38,24 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
     const [monto, setMonto] = useState("");
     const [referencia, setReferencia] = useState("");
     const [error, setError] = useState("");
+    // Efectivo que debería haber en la gaveta, para avisar si no alcanza el cambio.
+    // null: sin turno, sin conexión o cierre ciego (el cajero no debe ver cuánto hay)
+    const { cajaId } = useCaja();
+    const [enGaveta, setEnGaveta] = useState<number | null>(null);
+    const [porConfirmar, setPorConfirmar] = useState<{ valor: number; cambio: number } | null>(null);
+
+    useEffect(() => {
+        if (!isOpen || !enLinea || !cajaId) { setEnGaveta(null); return; }
+        let vigente = true;
+        getTurnoActual(cajaId)
+            .then((r) => { if (vigente) setEnGaveta(r.aviso_cambio !== false && r.turno && r.resumen?.efectivo_esperado != null ? Number(r.resumen.efectivo_esperado) : null); })
+            .catch(() => { if (vigente) setEnGaveta(null); });
+        return () => { vigente = false; };
+    }, [isOpen, enLinea, cajaId]);
 
     useEffect(() => {
         if (isOpen) {
+            setPorConfirmar(null);
             setPagos([]);
             setMetodo(efectivo);
             setMonto("");
@@ -54,6 +73,7 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
     const enCurso = montoActual > 0 ? montoActual : metodo.afecta_efectivo ? 0 : restante;
     const cubierto = redondear(pagado + enCurso);
     const cambio = redondear(Math.max(cubierto - total, 0));
+    const noAlcanza = (c: number) => enGaveta !== null && c > enGaveta + 0.001;
 
     const pagoActual = (valor: number): PagoFormInterface => ({
         metodo_pago_id: metodo.id, nombre: metodo.nombre, afecta_efectivo: metodo.afecta_efectivo,
@@ -92,7 +112,8 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
         setMetodo(efectivo);
     };
 
-    const cobrar = (montoDirecto?: number) => {
+    // forzar: el cajero ya vio el aviso de que no alcanza el cambio y cobra igual
+    const cobrar = (montoDirecto?: number, forzar = false) => {
         const valor = montoDirecto ?? enCurso;
         const lista = [...pagos];
         if (valor > 0) {
@@ -104,7 +125,13 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
             setError(`Falta cobrar ${dinero(total - suma)}`);
             return;
         }
+        const cambioDeEste = redondear(Math.max(suma - total, 0));
+        if (!forzar && noAlcanza(cambioDeEste)) {
+            setPorConfirmar({ valor, cambio: cambioDeEste });
+            return;
+        }
         setError("");
+        setPorConfirmar(null);
         onConfirm(lista);
     };
 
@@ -138,8 +165,29 @@ export default function CobroModal({ isOpen, total, metodos, cliente = null, enL
                         <dl className="space-y-1 text-lg">
                             <div className="flex justify-between"><dt className="text-gray-500">Recibido</dt><dd className="font-semibold">{dinero(cubierto)}</dd></div>
                             <div className="flex justify-between"><dt className="text-gray-500">Falta</dt><dd className={`font-semibold ${cubierto < total ? "text-red-600" : "text-gray-400"}`}>{dinero(Math.max(total - cubierto, 0))}</dd></div>
-                            <div className="flex justify-between text-2xl"><dt className="text-gray-700">Cambio</dt><dd className="font-bold text-green-700">{dinero(cambio)}</dd></div>
+                            <div className="flex justify-between text-2xl"><dt className="text-gray-700">Cambio</dt><dd className={`font-bold ${noAlcanza(cambio) ? "text-amber-600" : "text-green-700"}`}>{dinero(cambio)}</dd></div>
                         </dl>
+                        {noAlcanza(cambio) && !porConfirmar && (
+                            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                El cambio ({dinero(cambio)}) es mayor que el efectivo en la gaveta ({dinero(enGaveta ?? 0)}).
+                            </p>
+                        )}
+                        {porConfirmar && (
+                            <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                                <p className="font-semibold">No alcanza el cambio en la gaveta</p>
+                                <p>Hay que dar {dinero(porConfirmar.cambio)} de cambio y en la gaveta hay {dinero(enGaveta ?? 0)}. Pide un billete más chico, cobra con otra forma de pago o, si alguien pone el cambio, regístralo como ingreso de caja.</p>
+                                <div className="flex gap-2">
+                                    <button type="button" disabled={isLoading} onClick={() => cobrar(porConfirmar.valor, true)}
+                                        className="flex-1 rounded-lg bg-amber-500 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-50">Cobrar igual</button>
+                                    <button type="button" onClick={() => { setPorConfirmar(null); setMonto(""); }}
+                                        className="flex-1 rounded-lg bg-white py-2 font-semibold text-amber-800 hover:bg-amber-100">Cambiar el pago</button>
+                                </div>
+                                <button type="button" onClick={() => { setPorConfirmar(null); (onAnular ?? onCancel)(); }}
+                                    className="w-full rounded-lg py-2 font-semibold text-red-700 hover:bg-red-50">
+                                    {onAnular ? "Cancelar la venta" : "No cobrar por ahora"}
+                                </button>
+                            </div>
+                        )}
 
                         {metodo.afecta_efectivo && (
                             <div>

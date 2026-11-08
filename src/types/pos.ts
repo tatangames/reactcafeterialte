@@ -21,6 +21,7 @@ export interface ProductoPosInterface {
     bajo_minimo: boolean;
     grupos?: number[];              // extras que se eligen al tocarlo (Leche, Endulzante)
     receta?: IngredienteReceta[];   // lo que lleva: se puede quitar o aumentar sin cambiar el precio
+    alcanza?: number | null;        // platos con receta: cuántos alcanzan con los insumos (null = sin límite)
 }
 
 export interface CatalogoPosInterface {

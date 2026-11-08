@@ -6,6 +6,7 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getResumenProduccion } from '../../services/produccion';
 import { cantidad, dinero, fechaCorta, haceDias, hoyLocal, mensajeError } from '../../utils/formato';
 import { ResumenProduccionInterface } from '../../types/produccion';
+import Cargando from '../../components/ui/loading/Cargando';
 
 const tarjeta = 'rounded-xl border border-gray-200 bg-white p-4';
 const encabezado = 'bg-gray-50 text-left text-xs uppercase text-gray-500';
@@ -24,7 +25,7 @@ export default function ResumenProduccion() {
             <PageHeader title="Resumen de producción" subtitle="Rendimiento, consumo de ingredientes y mermas" backTo="/produccion" />
             <div className="mb-4"><DateRangeFilter desde={rango.desde} hasta={rango.hasta} onChange={setRango} /></div>
 
-            {!datos && <p className="text-gray-500">Cargando...</p>}
+            {!datos && <Cargando />}
             {datos && (
                 <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

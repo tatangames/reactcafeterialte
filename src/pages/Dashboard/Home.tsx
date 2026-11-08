@@ -11,6 +11,7 @@ import { getConfiguracionNegocio } from "../../services/configuracion";
 import { STORAGE_URL } from "../../services/api";
 import { getPanel, PanelInterface } from "../../services/reportes";
 import { cantidad, dinero, fechaCorta, fechaLocal, haceDias, hoyLocal, mensajeError } from "../../utils/formato";
+import Cargando from '../../components/ui/loading/Cargando';
 
 const tarjeta = "rounded-xl border border-gray-200 bg-white";
 const campo = "h-[42px] w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none";
@@ -173,6 +174,8 @@ export default function Home() {
                         </label>
                     </div>
                 )}
+
+                {verPanel && !panel && <Cargando texto="Cargando panel..." />}
 
                 {panel && v && a && r && (
                     <>

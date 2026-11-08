@@ -268,7 +268,8 @@ export interface EntradaFormInterface {
 
 
 
-export type ConexionImpresora = 'red' | 'windows';
+// dispositivo: la imprime la tablet del local (servidor en la nube)
+export type ConexionImpresora = 'red' | 'windows' | 'dispositivo';
 export type UsoImpresora = 'ticket' | 'comanda' | 'ambos';
 export type CajonImpresora = 'ninguno' | 'pin2' | 'pin5';
 
@@ -368,6 +369,7 @@ export interface ConfiguracionNegocioInterface {
     permitir_stock_negativo: boolean;
     descuento_max_sin_autorizacion: string;
     cierre_ciego: boolean;
+    aviso_cambio: boolean;
     mensaje_ticket: string | null;
 }
 
@@ -386,7 +388,86 @@ export interface ConfiguracionNegocioFormInterface {
     permitir_stock_negativo: boolean;
     descuento_max_sin_autorizacion: string;
     cierre_ciego: boolean;
+    aviso_cambio: boolean;
     mensaje_ticket: string;
     logo: File | null;
 }
 
+
+// ************************  FACTURACIÓN ELECTRÓNICA (DTE El Salvador)  ******************
+
+export interface FelActividad {
+    codigo: string;
+    descripcion: string;
+}
+
+export interface ConfiguracionFelInterface {
+    id: number;
+    activo: boolean;
+    ambiente: string;
+    proveedor: string;
+    api_url: string | null;
+    api_usuario: string | null;
+    firmador_url: string | null;
+    tiene_api_password: boolean;
+    tiene_clave_privada: boolean;
+    token_expira_at: string | null;
+    nit: string | null;
+    nrc: string | null;
+    razon_social: string | null;
+    nombre_comercial: string | null;
+    actividades: FelActividad[] | null;
+    tipo_establecimiento: string | null;
+    cod_establecimiento_mh: string | null;
+    cod_establecimiento: string | null;
+    cod_punto_venta_mh: string | null;
+    cod_punto_venta: string | null;
+    departamento: string | null;
+    municipio: string | null;
+    distrito: string | null;
+    direccion: string | null;
+    telefono: string | null;
+    correo: string | null;
+    tipos_dte: string[] | null;
+    ultima_prueba_at: string | null;
+    ultima_prueba_ok: boolean | null;
+    ultima_prueba_mensaje: string | null;
+}
+
+export interface FelCatalogos {
+    ambientes: Record<string, string>;
+    proveedores: Record<string, string>;
+    tipos_dte: Record<string, string>;
+    tipos_establecimiento: Record<string, string>;
+    actividades: FelActividad[];
+    departamentos: Record<string, { nombre: string; municipios: Record<string, { nombre: string; distritos: string[] }> }>;
+    firmador_url_defecto: string;
+}
+
+export interface ConfiguracionFelFormInterface {
+    activo: boolean;
+    ambiente: string;
+    proveedor: string;
+    api_url: string;
+    api_usuario: string;
+    api_password: string;
+    firmador_url: string;
+    clave_privada: string;
+    nit: string;
+    nrc: string;
+    razon_social: string;
+    nombre_comercial: string;
+    actividades: FelActividad[];
+    tipo_establecimiento: string;
+    cod_establecimiento_mh: string;
+    cod_establecimiento: string;
+    cod_punto_venta_mh: string;
+    cod_punto_venta: string;
+    departamento: string;
+    municipio: string;
+    distrito: string;
+    direccion: string;
+    telefono: string;
+    correo: string;
+    tipos_dte: string[];
+}

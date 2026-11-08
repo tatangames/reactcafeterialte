@@ -85,7 +85,7 @@ export default function InventarioEntradas() {
 
             {/* Modal detalle */}
             {isDetailOpen && selectedEntrada && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-semibold text-gray-800">

@@ -12,18 +12,15 @@ import { useCaja } from '../../context/CajaContext';
 import { cancelarPedidoEspecial, getPedidosEspeciales, registrarAnticipo } from '../../services/clientes';
 import { getCatalogoPos } from '../../services/pos';
 import { getConfiguracionNegocio } from '../../services/configuracion';
-import { cantidad, dinero, hoyLocal, mensajeError } from '../../utils/formato';
+import { cantidad, dinero, hoyLocal, mensajeError, fechaHora } from '../../utils/formato';
 import { PedidoEspecialInterface } from '../../types/clientes';
 import { ConfiguracionNegocioInterface } from '../../types/interfaces';
 import { ProductoPosInterface } from '../../types/pos';
+import Cargando from '../../components/ui/loading/Cargando';
 
 type Estado = 'abierto' | 'cobrado' | 'cancelado';
 
-const textoFecha = (f: string | null) => {
-    if (!f) return '—';
-    const [dia, hora] = f.split(' ');
-    return `${dia.split('-').reverse().join('/')} ${hora ?? ''}`;
-};
+const textoFecha = (f: string | null) => fechaHora(f);
 
 // Comprobante del encargo para el cliente (80 mm, se imprime desde el navegador)
 function ComprobantePedido({ pedido, negocio }: { pedido: PedidoEspecialInterface; negocio: ConfiguracionNegocioInterface | null }) {
@@ -206,7 +203,7 @@ export default function PedidosEspeciales() {
                                 <div>
                                     <p className="mb-1 text-sm font-semibold text-gray-700">Movimientos de caja</p>
                                     {viendo.anticipos.map((a, i) => (
-                                        <p key={i} className="text-sm text-gray-600">{a.fecha} · {a.tipo === 'anticipo' ? 'Anticipo' : 'Devolución'} {dinero(a.monto)} ({a.metodo}{a.referencia ? ` ${a.referencia}` : ''})</p>
+                                        <p key={i} className="text-sm text-gray-600">{fechaHora(a.fecha)} · {a.tipo === 'anticipo' ? 'Anticipo' : 'Devolución'} {dinero(a.monto)} ({a.metodo}{a.referencia ? ` ${a.referencia}` : ''})</p>
                                     ))}
                                 </div>
                             )}
@@ -255,7 +252,7 @@ export default function PedidosEspeciales() {
                 <input className={`${inputClass} max-w-xs`} placeholder="Buscar número, nombre o teléfono" value={buscar} onChange={e => setBuscar(e.target.value)} />
             </div>
 
-            {loading && pedidos.length === 0 && <p className="text-gray-500">Cargando...</p>}
+            {loading && pedidos.length === 0 && <Cargando />}
             {!loading && pedidos.length === 0 && <p className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-500">No hay pedidos</p>}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">

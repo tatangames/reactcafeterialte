@@ -5,7 +5,7 @@ import { PaginaInterface } from "../types/interfaces";
 
 export interface MatrizRolInterface {
     rol: { id: number; nombre: string; es_admin: boolean; usuarios: number };
-    modulos: { modulo: string; permisos: { nombre: string; descripcion: string; asignado: boolean }[] }[];
+    modulos: { modulo: string; permisos: { nombre: string; descripcion: string; ayuda?: string | null; asignado: boolean }[] }[];
 }
 
 export interface RegistroAuditoriaInterface {

@@ -54,12 +54,13 @@ export const vaciarNotificaciones = async (soloLeidas: boolean) => {
     return data as { borradas: number; message: string };
 };
 
-// "hace 5 min", "hace 2 h", "ayer", "03/11/2026"
+// "hace 5 min", "hace 2 h", "ayer", "03-11-2026"
 export const haceCuanto = (iso: string): string => {
     const seg = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
     if (seg < 60) return "ahora";
     if (seg < 3600) return `hace ${Math.floor(seg / 60)} min`;
     if (seg < 86400) return `hace ${Math.floor(seg / 3600)} h`;
     if (seg < 172800) return "ayer";
-    return new Date(iso).toLocaleDateString("es-SV", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
 };

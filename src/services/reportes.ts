@@ -22,6 +22,8 @@ export interface ReporteInterface {
     totales: Record<string, number | null> | null;
     indicadores: { titulo: string; valor: number | string; formato: FormatoColumna }[];
     grafica: { tipo: "barra" | "barra_horizontal" | "linea" | "dona"; etiqueta: string; series: string[]; limite?: number } | null;
+    /** «Quién agregó cada producto»: empleados del periodo para el filtro */
+    empleados?: { id: number; nombre: string }[];
 }
 
 export interface FiltrosReporte {
@@ -32,6 +34,7 @@ export interface FiltrosReporte {
     categoria_id?: number | string;
     clase?: string;
     motivo?: string;
+    usuario_id?: number | string;
 }
 
 export interface PanelInterface {

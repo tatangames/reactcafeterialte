@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCaja } from '../../context/CajaContext';
 import { useTurnoCajaHook } from '../../hooks/caja/useTurnoCajaHook';
 import { TurnoDetalleInterface } from '../../types/caja';
-import { dinero } from '../../utils/formato';
+import { dinero, fechaHora } from '../../utils/formato';
 import { abrirCajon, imprimirTurnoServidor, intentarImpresion } from '../../services/impresion';
 import { imprimirConRespaldo } from '../../utils/imprimir';
 import { ConsumoTurno, PorComprar } from '../../components/caja/PorComprar';
@@ -66,7 +66,7 @@ export default function CajaTurno() {
                             className="rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm hover:border-blue-400 hover:shadow transition">
                             <p className="text-lg font-semibold text-gray-800">{c.nombre}</p>
                             <p className="mt-1 text-sm text-gray-500">
-                                {c.turno_abierto ? `Turno abierto por ${c.turno_abierto.usuario} (${c.turno_abierto.abierto_at})` : 'Sin turno abierto'}
+                                {c.turno_abierto ? `Turno abierto por ${c.turno_abierto.usuario} (${fechaHora(c.turno_abierto.abierto_at)})` : 'Sin turno abierto'}
                             </p>
                         </button>
                     ))}
@@ -121,7 +121,7 @@ export default function CajaTurno() {
                 {/* Quien recibe la caja ve qué dejó por comprar el turno anterior */}
                 <div className="w-full lg:max-w-sm">
                     <PorComprar productos={actual?.por_comprar ?? []}
-                        titulo={actual?.turno_anterior ? `Por comprar · cerró ${actual.turno_anterior.cerro ?? ''} ${actual.turno_anterior.cerrado_at ?? ''}` : 'Por comprar'} />
+                        titulo={actual?.turno_anterior ? `Por comprar · cerró ${actual.turno_anterior.cerro ?? ''} ${actual.turno_anterior.cerrado_at ? fechaHora(actual.turno_anterior.cerrado_at) : ''}` : 'Por comprar'} />
                 </div>
                 </div>
             </div>
@@ -191,7 +191,7 @@ export default function CajaTurno() {
 
             <PageHeader
                 title={`${turno.caja} · Turno #${turno.id}`}
-                subtitle={`Abierto por ${turno.usuario_apertura} el ${turno.abierto_at}`}
+                subtitle={`Abierto por ${turno.usuario_apertura} el ${fechaHora(turno.abierto_at)}`}
                 actions={<>{cambiarCaja}<StatusBadge tone="success">Abierto</StatusBadge></>}
             />
 

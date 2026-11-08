@@ -157,6 +157,8 @@ export interface TurnoActualResponseInterface extends Partial<Omit<TurnoDetalleI
     turno: TurnoInterface | null;
     // El turno abierto es de otra persona (se fue sin cerrarlo): solo se puede cerrar
     turno_ajeno?: boolean;
+    // Datos del negocio → «Avisar si no alcanza el cambio»
+    aviso_cambio?: boolean;
     // Solo sin turno abierto: quién cerró el anterior y qué dejó por comprar
     turno_anterior?: { id: number; cerrado_at: string | null; cerro: string | null } | null;
     por_comprar?: PorComprarInterface[];

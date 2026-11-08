@@ -17,7 +17,7 @@ import {
 
 const formVacio: ImpresoraFormInterface = {
     alias: "",
-    conexion: "red",
+    conexion: "dispositivo",
     ip_impresora: "",
     puerto: "9100",
     nombre_windows: "",
@@ -107,7 +107,7 @@ export function useImpresoras() {
 
     const handleGuardar = async () => {
         if (!form.alias.trim()) return toast.error("Ponle un nombre a la impresora");
-        if (form.conexion === "red" && !form.ip_impresora.trim()) return toast.error("Indica la IP de la impresora");
+        if (form.conexion !== "windows" && !form.ip_impresora.trim()) return toast.error("Indica la IP de la impresora");
         if (form.conexion === "windows" && !form.nombre_windows.trim()) return toast.error("Indica el nombre de la impresora en Windows");
 
         setIsSaving(true);

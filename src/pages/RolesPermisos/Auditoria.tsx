@@ -6,8 +6,9 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import Paginacion from '../../components/common/Paginacion';
 import { inputClass } from '../../components/form/FormField';
 import { getAuditoria, getFiltrosAuditoria, RegistroAuditoriaInterface } from '../../services/seguridad';
-import { haceDias, hoyLocal, mensajeError } from '../../utils/formato';
+import { haceDias, hoyLocal, mensajeError, fechaHora } from '../../utils/formato';
 import { PaginaInterface } from '../../types/interfaces';
+import { FilaCargando } from '../../components/ui/loading/Cargando';
 
 const valorTexto = (v: unknown): string => {
     if (v === null || v === undefined) return '—';
@@ -92,12 +93,12 @@ export default function Auditoria() {
                             <th className="px-4 py-3">Acción</th><th className="px-4 py-3">Registro</th><th className="px-4 py-3">Descripción</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {!datos && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>}
+                        {!datos && <FilaCargando colSpan={6} />}
                         {datos?.registros.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Sin registros con esos filtros</td></tr>}
                         {datos?.registros.map(r => (
                             <Fragment key={r.id}>
                                 <tr onClick={() => setAbierto(abierto === r.id ? null : r.id)} className="cursor-pointer hover:bg-gray-50">
-                                    <td className="whitespace-nowrap px-4 py-3">{r.fecha.slice(0, 16).split(' ').map((p, i) => i === 0 ? p.split('-').reverse().join('/') : p).join(' ')}</td>
+                                    <td className="whitespace-nowrap px-4 py-3">{fechaHora(r.fecha)}</td>
                                     <td className="px-4 py-3">{r.usuario}</td>
                                     <td className="px-4 py-3">{r.modulo}</td>
                                     <td className="px-4 py-3 font-medium">{r.accion.replace(/_/g, ' ')}</td>
