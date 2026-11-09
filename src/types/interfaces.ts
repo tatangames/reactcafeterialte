@@ -372,6 +372,7 @@ export interface ConfiguracionNegocioInterface {
     descuento_max_sin_autorizacion: string;
     cierre_ciego: boolean;
     aviso_cambio: boolean;
+    ticket_por_comprar: boolean;
     mensaje_ticket: string | null;
 }
 
@@ -391,6 +392,7 @@ export interface ConfiguracionNegocioFormInterface {
     descuento_max_sin_autorizacion: string;
     cierre_ciego: boolean;
     aviso_cambio: boolean;
+    ticket_por_comprar: boolean;
     mensaje_ticket: string;
     logo: File | null;
 }

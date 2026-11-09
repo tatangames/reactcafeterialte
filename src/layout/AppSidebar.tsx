@@ -236,6 +236,11 @@ const navItems: NavItem[] = [
         path: "/admin/inventario",
         permissions: ["inventario.ver"],
       },
+      {
+        name: "Control de existencias",
+        path: "/admin/inventario/control",
+        permissions: ["inventario.ver"],
+      },
     ],
   },
 

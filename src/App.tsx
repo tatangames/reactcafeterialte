@@ -29,6 +29,7 @@ import ProductoRegistro from "./pages/Productos/ProductoRegistro.tsx";
 import ProductoEditar from "./pages/Productos/ProductoEditar.tsx";
 import OrdenPos from "./pages/Productos/OrdenPos.tsx";
 import InventarioStock from "./pages/Inventario/Inventario.tsx";
+import InventarioControl from "./pages/Inventario/InventarioControl.tsx";
 import InventarioEntradas from "./pages/Inventario/InventarioEntradas.tsx";
 import InventarioNuevoRegistro from "./pages/Inventario/InventarioNuevoRegistro.tsx";
 import InventarioConteo from "./pages/Inventario/InventarioConteo.tsx";
@@ -280,6 +281,7 @@ export default function App() {
 
                   { /* INVENTARIO */}
                   <Route path="/admin/inventario" element={<PermissionRoute permission="inventario.ver"><InventarioStock /></PermissionRoute>} />
+                  <Route path="/admin/inventario/control" element={<PermissionRoute permission="inventario.ver"><InventarioControl /></PermissionRoute>} />
                   <Route path="/admin/inventario/entradas" element={<PermissionRoute permission="inventario.ver"><InventarioEntradas /></PermissionRoute>} />
                   <Route path="/admin/inventario/entradas/nuevo" element={<PermissionRoute permissions={["inventario.registrar", "inventario.ajustar"]}><InventarioNuevoRegistro /></PermissionRoute>} />
                   <Route path="/admin/inventario/conteo" element={<PermissionRoute permission="inventario.ajustar"><InventarioConteo /></PermissionRoute>} />

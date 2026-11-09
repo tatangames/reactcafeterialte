@@ -88,14 +88,18 @@ export default function TurnoReporte({ detalle, negocio = "Panadería Eduardo" }
                 </>
             )}
 
-            {/* Lo que el siguiente turno tiene que comprar */}
-            <hr className="my-2 border-dashed border-gray-400" />
-            <p className="font-semibold">POR COMPRAR</p>
-            {(resumen.por_comprar ?? []).length === 0 && <p>Nada bajo el mínimo</p>}
-            {(resumen.por_comprar ?? []).map((p) => (
-                <Fila key={p.producto_id} etiqueta={p.producto}
-                    valor={`hay ${cantidad(p.stock_actual, p.unidad)} / mín ${cantidad(p.stock_minimo)}`} />
-            ))}
+            {/* Lo que el siguiente turno tiene que comprar (se apaga en Datos del negocio) */}
+            {resumen.ticket_por_comprar !== false && (
+                <>
+                    <hr className="my-2 border-dashed border-gray-400" />
+                    <p className="font-semibold">POR COMPRAR</p>
+                    {(resumen.por_comprar ?? []).length === 0 && <p>Nada bajo el mínimo</p>}
+                    {(resumen.por_comprar ?? []).map((p) => (
+                        <Fila key={p.producto_id} etiqueta={p.producto}
+                            valor={`hay ${cantidad(p.stock_actual, p.unidad)} / mín ${cantidad(p.stock_minimo)}`} />
+                    ))}
+                </>
+            )}
 
             <div className="mt-8 grid grid-cols-2 gap-6 text-center text-xs">
                 <div className="border-t border-gray-500 pt-1">Cajero</div>

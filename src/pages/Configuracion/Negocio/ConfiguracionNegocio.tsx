@@ -90,6 +90,17 @@ const AYUDA_AVISO_CAMBIO = (
     </>
 );
 
+const AYUDA_POR_COMPRAR = (
+    <>
+        <p>Al cerrar el turno, el ticket termina con la lista <b>POR COMPRAR</b>: los productos que quedaron en su stock mínimo o por debajo.</p>
+        <Ejemplo titulo="Ejemplo: la Concha quedó en 0 y su mínimo es 20">
+            <p><b>Encendido:</b> el ticket de cierre imprime «Concha · hay 0 u / mín 20» al final.</p>
+            <p><b>Apagado:</b> el ticket de cierre no imprime esa sección.</p>
+        </Ejemplo>
+        <p><b>La lista no se pierde:</b> sigue en la pantalla de cierre de caja y en Inventario › Control de existencias, y la campanita sigue avisando.</p>
+    </>
+);
+
 const AYUDA_CIERRE_CIEGO = (
     <>
         <p>Sirve para que el conteo de la gaveta sea honesto: quien cuenta no sabe cuánto «debería» haber, así que escribe lo que de verdad tiene en la mano.</p>
@@ -216,6 +227,13 @@ export default function ConfiguracionNegocio() {
                                     titulo="Avisar si no alcanza el cambio"
                                     descripcion="Al cobrar en efectivo, avisa cuando el cambio es mayor que lo que hay en la gaveta"
                                     ayuda={AYUDA_AVISO_CAMBIO}
+                                />
+                                <Interruptor
+                                    checked={form.ticket_por_comprar}
+                                    onChange={(v) => handleChange("ticket_por_comprar", v)}
+                                    titulo="«Por comprar» en el ticket de cierre"
+                                    descripcion="Imprime al final del cierre de turno los productos en su mínimo o por debajo"
+                                    ayuda={AYUDA_POR_COMPRAR}
                                 />
                             </div>
                         </div>

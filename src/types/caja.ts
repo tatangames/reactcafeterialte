@@ -112,6 +112,7 @@ export interface ResumenTurnoInterface {
     fondo_inicial: number;
     consumo: ConsumoTurnoInterface[];
     por_comprar: PorComprarInterface[];
+    ticket_por_comprar?: boolean; // Datos del negocio: si el ticket de cierre imprime «POR COMPRAR»
     efectivo_esperado: number | null;
     por_tipo: Record<TipoMovimientoCaja, number>;
     por_metodo: ResumenMetodoInterface[];
