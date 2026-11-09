@@ -67,9 +67,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Si el administrador cambia los permisos del rol, se toman al volver a la ventana
     // y cada minuto, sin tener que cerrar sesión
+    // Sesión cerrada en otra pestaña o ventana: esta también la suelta (ProtectedRoute manda al login)
+    useEffect(() => {
+        const alCambiarAlmacen = (e: StorageEvent) => {
+            if ((e.key === 'auth' || e.key === null) && !getAuth()) setUser(null);
+        };
+        window.addEventListener('storage', alCambiarAlmacen);
+        return () => window.removeEventListener('storage', alCambiarAlmacen);
+    }, []);
+
     useEffect(() => {
         if (!user) return;
-        const refrescar = () => { if (getAuth()) refreshUser(); };
+        // Sin sesión guardada (se cerró o expiró): se suelta el usuario para volver al login
+        const refrescar = () => { if (getAuth()) refreshUser(); else setUser(null); };
         const timer = setInterval(refrescar, 60 * 1000);
         window.addEventListener('focus', refrescar);
         return () => {
