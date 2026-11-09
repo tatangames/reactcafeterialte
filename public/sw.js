@@ -1,6 +1,7 @@
 // Service worker del POS: guarda la aplicación (no los datos) para poder abrirla sin conexión.
 // Los datos sin conexión viven en IndexedDB (ver src/utils/offlineDb.ts).
-const CACHE = "pos-app-v1";
+// v2: borra las cachés v1, que en producción guardaron respuestas de /api por error
+const CACHE = "pos-app-v2";
 
 self.addEventListener("install", (event) => {
     event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/index.html"])));
@@ -18,8 +19,10 @@ self.addEventListener("fetch", (event) => {
     const req = event.request;
     const url = new URL(req.url);
 
-    // Solo la propia aplicación: la API (otro puerto u origen) nunca se guarda
+    // Solo la propia aplicación. La API nunca se guarda: en desarrollo está en otro origen y en
+    // producción en el mismo dominio bajo /api (y /up), así que se excluye por ruta también.
     if (req.method !== "GET" || url.origin !== self.location.origin) return;
+    if (url.pathname.startsWith("/api/") || url.pathname === "/api" || url.pathname === "/up") return;
 
     // Navegación (rutas de React): primero la red; sin conexión, la app guardada
     if (req.mode === "navigate") {
