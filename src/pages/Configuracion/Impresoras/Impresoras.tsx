@@ -216,11 +216,7 @@ export default function Impresoras() {
                                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">
                                         {probando === imp.id && !probandoProduccion ? "Enviando..." : "Imprimir prueba"}
                                     </button>
-                                    <button type="button" onClick={() => handleProbar(imp.id, true)} disabled={probando === imp.id}
-                                        title="Imprime una comanda de ejemplo (Mesa 1, Ice latte) con el formato de cocina y barra"
-                                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50">
-                                        {probando === imp.id && probandoProduccion ? "Enviando..." : "Prueba producción"}
-                                    </button>
+
                                     <button type="button" onClick={() => abrirModalEditar(imp)} className="px-4 py-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">Editar</button>
                                     <button type="button" onClick={() => setEliminando(imp)} className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">Eliminar</button>
                                 </div>
