@@ -4,7 +4,8 @@ import { api } from "./api";
 import { CatalogoMesasInterface, ComandaInterface, OrdenInterface, TerminalMapaInterface } from "../types/mesas";
 import { VentaInterface } from "../types/pos";
 
-type ConOrden = { success: number; message?: string; orden: OrdenInterface };
+// avisos: se agregó igual, pero no alcanza la existencia (el cobro es el que lo exige)
+type ConOrden = { success: number; message?: string; orden: OrdenInterface; avisos?: string[] };
 
 export const getMapa = async (): Promise<TerminalMapaInterface[]> => (await api.get("/mesas/mapa")).data.terminales;
 export const getCatalogoMesas = async (): Promise<CatalogoMesasInterface> => (await api.get("/mesas/catalogo")).data;

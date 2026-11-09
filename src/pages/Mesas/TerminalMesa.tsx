@@ -127,11 +127,13 @@ export default function TerminalMesa() {
         setSeleccion(s => s.filter(x => vigentes.has(x)));
     }, [orden]);
 
-    const ejecutar = async <T extends { orden?: OrdenInterface },>(accion: () => Promise<T>, error: string): Promise<T | null> => {
+    const ejecutar = async <T extends { orden?: OrdenInterface; avisos?: string[] },>(accion: () => Promise<T>, error: string): Promise<T | null> => {
         setOcupado(true);
         try {
             const res = await accion();
             if (res?.orden) setOrden(res.orden);
+            // Se agregó, pero no alcanza la existencia: el cobro es el que lo exige
+            res?.avisos?.forEach(a => toast(a, { icon: '⚠️', duration: 6000 }));
             return res;
         } catch (e) {
             toast.error(mensajeError(e, error));
@@ -164,14 +166,11 @@ export default function TerminalMesa() {
         if (res) toast.success(`${producto.nombre} agregado a ${activo?.nombre ?? 'la cuenta'}`, { duration: 2000 });
     };
 
-    // Sin stock negativo: lo que no hay (o un plato cuyos ingredientes no alcanzan) no se agrega
+    // Sin stock negativo, lo que no hay (o un plato cuyos ingredientes no alcanzan) sale «Agotado»,
+    // pero se puede agregar: el servidor avisa y el cobro es el que exige la existencia
     const agotadoMesa = (p: ProductoMesaInterface) => catalogo?.permitir_stock_negativo === false
         && ((p.disponible !== null && p.disponible <= 0) || (p.alcanza !== null && p.alcanza <= 0));
     const tocarProducto = (p: ProductoMesaInterface) => {
-        if (agotadoMesa(p)) {
-            toast.error(p.disponible !== null ? `No hay existencia de ${p.nombre}` : `No alcanzan los ingredientes para ${p.nombre}`);
-            return;
-        }
         if (p.grupos.length > 0) setConExtras(p); else agregar(p);
     };
 
