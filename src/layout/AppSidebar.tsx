@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCaja } from "../context/CajaContext";
 import toast from "react-hot-toast";
 import CustomIcon from "../components/sidebar/CustomIcon.tsx";
+import { MODULOS_ACTIVOS } from "../utils/modulos";
 
 // permissions: basta con tener uno; sin permissions el item es visible para todos
 type NavSubItem = { name: string; path: string; permissions?: string[] };
@@ -295,11 +296,12 @@ const navItems: NavItem[] = [
         path: "/admin/configuracion/negocio",
         permissions: ["configuracion.gestionar"],
       },
-      {
+      // Oculto mientras el negocio no use facturación electrónica (utils/modulos.ts)
+      ...(MODULOS_ACTIVOS.facturacionElectronica ? [{
         name: "Facturación electrónica",
         path: "/admin/configuracion/facturacion-electronica",
         permissions: ["configuracion.gestionar"],
-      },
+      }] : []),
     ],
   },
 
