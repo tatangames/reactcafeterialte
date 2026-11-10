@@ -79,6 +79,7 @@ export interface ProductoFormInterface {
     consumo_interno: boolean;
     controla_stock: boolean;
     permite_fraccion: boolean;
+    permite_sin_existencia: boolean; // lleva inventario pero se vende aunque no haya (Coca-Cola)
     imprime_comanda: boolean; // false: se entrega directo, nunca manda comanda a cocina/barra
     costo_unitario: string;
     precio_venta: string;
@@ -103,6 +104,7 @@ export interface ProductoEditInterface {
     consumo_interno: boolean;
     controla_stock: boolean;
     permite_fraccion: boolean;
+    permite_sin_existencia?: boolean;
     imprime_comanda?: boolean;
     costo_unitario: string;
     precio_venta: string;

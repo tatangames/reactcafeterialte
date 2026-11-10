@@ -14,6 +14,8 @@ export interface ProductoPosInterface {
     categorias: number[];
     unidad: string | null;
     permite_fraccion: boolean;
+    // Lleva inventario pero se vende aunque no haya existencia (Coca-Cola)
+    permite_sin_existencia?: boolean;
     controla_stock: boolean;
     consumo_interno?: boolean; // cena del personal: a $0.00, solo descuenta su receta
     area?: string | null;      // área de su comanda (null = comanda general)

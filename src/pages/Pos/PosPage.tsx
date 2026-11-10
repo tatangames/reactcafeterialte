@@ -24,7 +24,7 @@ import Cargando from '../../components/ui/loading/Cargando';
 
 function TarjetaProducto({ producto, bloqueado, verExistencia, onClick }: { producto: ProductoPosInterface; bloqueado: boolean; verExistencia: boolean; onClick: () => void }) {
     // bloqueado: sin stock negativo, no hay existencia o no alcanzan los ingredientes de su receta
-    const agotado = bloqueado || (producto.controla_stock && (producto.stock ?? 0) <= 0);
+    const agotado = bloqueado || (producto.controla_stock && !producto.permite_sin_existencia && (producto.stock ?? 0) <= 0);
     return (
         <button type="button" onClick={onClick}
             className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md active:scale-[0.97] ${bloqueado ? 'opacity-50' : ''}`}

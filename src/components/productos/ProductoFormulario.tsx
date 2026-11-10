@@ -149,6 +149,10 @@ export default function ProductoFormulario({
                             titulo="Lleva inventario" descripcion="Descuenta existencias al venderse o usarse" />
                         <Interruptor checked={form.permite_fraccion} onChange={(v) => onChange("permite_fraccion", v)}
                             titulo="Admite decimales" descripcion="Por peso o volumen (ej. 2.5 lb)" />
+                        {form.controla_stock && (
+                            <Interruptor checked={form.permite_sin_existencia} onChange={(v) => onChange("permite_sin_existencia", v)}
+                                titulo="Permitir vender sin existencia" descripcion="Para productos simples (Coca-Cola, golosinas): se vende aunque marque 0 y queda en negativo, aunque el negocio no permita stock negativo" />
+                        )}
                         <Interruptor checked={form.consumo_interno} onChange={(v) => onChange("consumo_interno", v)}
                             titulo="Consumo interno" descripcion="Cena del personal o cortesía: sale a $0.00, no entra a caja y solo descuenta su receta" />
                         {form.se_vende && (

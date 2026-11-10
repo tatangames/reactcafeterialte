@@ -118,6 +118,7 @@ export interface ProductoMesaInterface {
     imagen: string | null;
     color: string | null;
     permite_fraccion: boolean;
+    permite_sin_existencia?: boolean;
     categorias: number[];
     grupos: number[];
     stock: number | null;

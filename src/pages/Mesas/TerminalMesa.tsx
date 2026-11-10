@@ -168,7 +168,7 @@ export default function TerminalMesa() {
 
     // Sin stock negativo, lo que no hay (o un plato cuyos ingredientes no alcanzan) sale «Agotado»,
     // pero se puede agregar: el servidor avisa y el cobro es el que exige la existencia
-    const agotadoMesa = (p: ProductoMesaInterface) => catalogo?.permitir_stock_negativo === false
+    const agotadoMesa = (p: ProductoMesaInterface) => catalogo?.permitir_stock_negativo === false && !p.permite_sin_existencia
         && ((p.disponible !== null && p.disponible <= 0) || (p.alcanza !== null && p.alcanza <= 0));
     const tocarProducto = (p: ProductoMesaInterface) => {
         if (p.grupos.length > 0) setConExtras(p); else agregar(p);

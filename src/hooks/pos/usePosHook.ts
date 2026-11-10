@@ -118,8 +118,9 @@ export function usePosHook() {
     // ── Carrito ────────────────────────────────────────────────
     // Sin stock negativo (Datos del negocio) no se agrega más de lo que hay: la existencia del
     // producto o, si sale de su receta, los platos que alcanzan con sus insumos
+    // «Permitir vender sin existencia» (Coca-Cola): sin límite aunque marque 0
     const limite = (producto: ProductoPosInterface): number | null =>
-        producto.controla_stock ? (producto.stock ?? 0) : (producto.alcanza ?? null);
+        producto.permite_sin_existencia ? null : producto.controla_stock ? (producto.stock ?? 0) : (producto.alcanza ?? null);
 
     const cabe = (producto: ProductoPosInterface, nuevo: number, sinContar?: string): boolean => {
         const hay = limite(producto);

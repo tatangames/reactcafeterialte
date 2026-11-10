@@ -12,6 +12,7 @@ export const productoFormInicial: ProductoFormInterface = {
     consumo_interno: false,
     controla_stock: true,
     permite_fraccion: false,
+    permite_sin_existencia: false,
     imprime_comanda: true,
     costo_unitario: "",
     precio_venta: "",
@@ -48,6 +49,7 @@ export const productoAFormulario = (p: ProductoEditInterface): ProductoFormInter
     consumo_interno: !!p.consumo_interno,
     controla_stock: p.controla_stock,
     permite_fraccion: p.permite_fraccion,
+    permite_sin_existencia: p.permite_sin_existencia ?? false,
     imprime_comanda: p.imprime_comanda ?? true,
     costo_unitario: String(Number(p.costo_unitario)),
     precio_venta: String(Number(p.precio_venta)),
@@ -84,6 +86,7 @@ export const productoFormData = (form: ProductoFormInterface, activo?: boolean):
     fd.append("consumo_interno", bool(form.consumo_interno));
     fd.append("controla_stock", bool(form.controla_stock));
     fd.append("permite_fraccion", bool(form.permite_fraccion));
+    fd.append("permite_sin_existencia", bool(form.controla_stock && form.permite_sin_existencia));
     fd.append("imprime_comanda", bool(form.imprime_comanda));
     fd.append("costo_unitario", form.costo_unitario || "0");
     fd.append("precio_venta", form.consumo_interno ? "0" : form.precio_venta || "0");
