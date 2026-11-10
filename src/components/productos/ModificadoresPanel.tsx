@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
-import StatusBadge from '../common/StatusBadge';
 import FormField, { inputClass } from '../form/FormField';
 import MoneyInput from '../form/MoneyInput';
 import SelectBuscador from '../form/SelectBuscador';
@@ -33,8 +32,12 @@ function Ventana({ titulo, children, onCerrar, onGuardar, guardando, ancho = 'ma
 
 // Una opción del formulario: el insumo es opcional (Revueltos no gasta nada; Fresa gasta 30 g)
 // maximo: cuántas veces se puede pedir en un mismo producto (Huevo extra hasta 3); 1 = se marca o no
-type OpcionForm = { id?: number; nombre: string; precio: string; maximo: string; producto_id: string; cantidad: string; unidad_medida_id: string };
-const opcionVacia = (): OpcionForm => ({ nombre: '', precio: '', maximo: '1', producto_id: '', cantidad: '', unidad_medida_id: '' });
+// obligatorio: siempre va; exclusiva: «una sola», al elegirla se quitan las demás; activo: apagada no sale al vender
+type OpcionForm = {
+    id?: number; nombre: string; precio: string; maximo: string; obligatorio: boolean; exclusiva: boolean; activo: boolean;
+    producto_id: string; cantidad: string; unidad_medida_id: string;
+};
+const opcionVacia = (): OpcionForm => ({ nombre: '', precio: '', maximo: '1', obligatorio: false, exclusiva: false, activo: true, producto_id: '', cantidad: '', unidad_medida_id: '' });
 
 // «¿Cómo funciona?» del grupo de modificadores: casillas, precio extra e insumo, con ejemplos
 function AyudaModificadores() {
@@ -50,9 +53,11 @@ function AyudaModificadores() {
             <Bloque titulo="Nombre">
                 <p>Corto, porque es lo que ve el mesero: «Salsa», «Leche», «Huevos». El producto al que aplica se elige abajo, en «Productos que lo usan» (no hace falta escribirlo en el nombre).</p>
             </Bloque>
-            <Bloque titulo="Casillas">
-                <p><b>Obligatorio:</b> no deja agregar el producto sin elegir una opción. Ej.: «Huevos» del desayuno (estrellados, revueltos).</p>
-                <p><b>Se pueden elegir varias:</b> encendida, se marcan varias a la vez (toppings: fresas y mantequilla). Apagada, solo una (salsa: Nutella o caramelo).</p>
+            <Bloque titulo="Casillas de cada opción">
+                <p><b>Obligatorio:</b> la opción siempre va marcada y no se puede quitar (si tiene máximo, se puede subir). Ej.: «Tortillas» del desayuno.</p>
+                <p><b>Una sola:</b> al elegirla se quitan las demás opciones del grupo, y al elegir otra se quita ella. Ej.: «Sin azúcar» quita «Azúcar extra». Si todas son «una sola», solo se elige una (Estrellados, Revueltos o Picados).</p>
+                <p><b>Elegir al menos una</b> (del grupo): no deja agregar el producto sin marcar alguna opción. Ej.: «Huevos» del desayuno.</p>
+                <p><b>Activa:</b> apagada no sale al vender, pero se conserva (ej. un sabor que se acabó por temporada).</p>
             </Bloque>
             <Bloque titulo="Precio extra (+$)">
                 <p>Lo que se <b>suma al precio</b> del producto si el cliente elige esa opción. Waffle $2.75 + Nutella (+$0.50) = <b>$3.25</b>.</p>
@@ -81,8 +86,7 @@ export default function ModificadoresPanel() {
     const [unidades, setUnidades] = useState<UnidadModificadorInterface[]>([]);
     const [verAyudaGrupo, setVerAyudaGrupo] = useState(false);
     const [grupo, setGrupo] = useState<{
-        id?: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
-        opciones: OpcionForm[]; productos: number[];
+        id?: number; nombre: string; obligatorio: boolean; opciones: OpcionForm[]; productos: number[];
     } | null>(null);
     const [buscarProducto, setBuscarProducto] = useState('');
 
@@ -96,7 +100,7 @@ export default function ModificadoresPanel() {
     const visibles = useMemo(() => {
         const t = sinTildes(buscar.trim());
         if (!t) return grupos;
-        return grupos.filter(g => [g.nombre, ...g.opciones.filter(o => o.activo).map(o => o.nombre), ...g.productos.map(p => p.nombre)]
+        return grupos.filter(g => [g.nombre, ...g.opciones.map(o => o.nombre), ...g.productos.map(p => p.nombre)]
             .some(texto => sinTildes(texto).includes(t)));
     }, [grupos, buscar]);
 
@@ -119,7 +123,7 @@ export default function ModificadoresPanel() {
                         {(
                 <>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                        <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, multiple: false, activo: true, opciones: [opcionVacia()], productos: [] })}
+                        <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, opciones: [opcionVacia()], productos: [] })}
                             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nuevo grupo</button>
                         <input type="text" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar grupo, opción o producto..."
                             className="h-[42px] w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 sm:w-[300px]" />
@@ -130,20 +134,27 @@ export default function ModificadoresPanel() {
                         {cargado && grupos.length > 0 && visibles.length === 0 && <p className="text-sm text-gray-500">Ningún grupo coincide con «{buscar.trim()}».</p>}
                         {visibles.map(g => (
                             <button key={g.id} type="button" onClick={() => setGrupo({
-                                id: g.id, nombre: g.nombre, obligatorio: g.obligatorio, multiple: g.multiple, activo: g.activo,
-                                opciones: g.opciones.filter(o => o.activo).map(o => ({
+                                id: g.id, nombre: g.nombre, obligatorio: g.obligatorio,
+                                opciones: g.opciones.map(o => ({
                                     id: o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
+                                    obligatorio: !!o.obligatorio, exclusiva: !!o.exclusiva, activo: o.activo,
                                     producto_id: o.producto_id ? String(o.producto_id) : '', cantidad: o.cantidad ? String(o.cantidad) : '',
                                     unidad_medida_id: o.unidad_medida_id ? String(o.unidad_medida_id) : '',
                                 })),
                                 productos: g.productos.map(p => p.id),
                             })} className="rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm">
-                                <div className="flex items-center justify-between">
-                                    <p className="font-semibold">{g.nombre}</p>
-                                    {!g.activo && <StatusBadge tone="neutral">Inactivo</StatusBadge>}
+                                <p className="font-semibold">{g.nombre}</p>
+                                {g.obligatorio && <p className="text-xs font-medium text-amber-700">Hay que elegir al menos una</p>}
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {g.opciones.map(o => (
+                                        <span key={o.id} className={`rounded-full px-2.5 py-1 text-xs ${o.activo ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400 line-through'}`}>
+                                            {o.nombre}{o.precio > 0 ? ` +${dinero(o.precio)}` : ''}{(o.maximo ?? 1) > 1 ? ` · hasta ${o.maximo}` : ''}
+                                            {o.obligatorio && <b className="ml-1 text-amber-700">· obligatorio</b>}
+                                            {o.exclusiva && <span className="ml-1 text-blue-700">· una sola</span>}
+                                            {!o.activo && <span className="ml-1">(apagada)</span>}
+                                        </span>
+                                    ))}
                                 </div>
-                                <p className="text-xs text-gray-500">{g.obligatorio ? 'Obligatorio' : 'Opcional'} · {g.multiple ? 'varias opciones' : 'una opción'}</p>
-                                <p className="mt-2 text-sm text-gray-700">{g.opciones.filter(o => o.activo).map(o => `${o.nombre}${o.precio > 0 ? ` (+${dinero(o.precio)})` : ''}${(o.maximo ?? 1) > 1 ? ` hasta ${o.maximo}` : ''}`).join(', ')}</p>
                                 {g.opciones.some(o => o.activo && o.insumo) && (
                                     <p className="mt-1 text-xs text-gray-500">Descuenta: {g.opciones.filter(o => o.activo && o.insumo).map(o => `${o.insumo} ${o.cantidad} ${o.unidad ?? ''}`.trim()).join(' · ')}</p>
                                 )}
@@ -157,9 +168,10 @@ export default function ModificadoresPanel() {
             {grupo && (
                 <Ventana titulo={grupo.id ? `Editar ${grupo.nombre}` : 'Nuevo grupo de modificadores'} ancho="max-w-2xl" guardando={guardando} onCerrar={() => setGrupo(null)}
                     onGuardar={() => guardar(() => guardarGrupo({
-                        nombre: grupo.nombre.trim(), obligatorio: grupo.obligatorio, multiple: grupo.multiple, activo: grupo.activo,
+                        nombre: grupo.nombre.trim(), obligatorio: grupo.obligatorio,
                         opciones: grupo.opciones.filter(o => o.nombre.trim()).map(o => ({
                             id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0),
+                            obligatorio: o.obligatorio, exclusiva: o.exclusiva, activo: o.activo,
                             maximo: Math.min(20, Math.max(1, Math.floor(Number(o.maximo) || 1))),
                             producto_id: o.producto_id ? Number(o.producto_id) : null,
                             cantidad: o.producto_id ? Number(o.cantidad || 0) : null,
@@ -178,18 +190,17 @@ export default function ModificadoresPanel() {
                     <FormField label="Nombre" required>
                         <input className={inputClass} value={grupo.nombre} maxLength={80} autoFocus placeholder="Leche, Saborizante, Tamaño..." onChange={e => setGrupo(g => g && { ...g, nombre: e.target.value })} />
                     </FormField>
-                    <div className="flex flex-wrap gap-4 text-sm">
-                        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={grupo.obligatorio} onChange={e => setGrupo(g => g && { ...g, obligatorio: e.target.checked })} /> Obligatorio</label>
-                        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={grupo.multiple} onChange={e => setGrupo(g => g && { ...g, multiple: e.target.checked })} /> Se pueden elegir varias</label>
-                        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={grupo.activo} onChange={e => setGrupo(g => g && { ...g, activo: e.target.checked })} /> Activo</label>
-                    </div>
+                    <label className="flex items-center gap-2 text-sm" title="No deja agregar el producto sin marcar alguna opción del grupo">
+                        <input type="checkbox" className="h-4 w-4" checked={grupo.obligatorio} onChange={e => setGrupo(g => g && { ...g, obligatorio: e.target.checked })} />
+                        Elegir al menos una <span className="text-xs text-gray-500">(ej. Huevos: estrellados o revueltos)</span>
+                    </label>
                     <FormField label="Opciones" required hint="Precio extra en blanco: no cambia el precio. Insumo: lo que se descuenta del inventario por cada producto vendido con esa opción.">
                         <div className="space-y-3">
                             {grupo.opciones.map((o, n) => {
                                 const cambiar = (c: Partial<OpcionForm>) => setGrupo(g => g && { ...g, opciones: g.opciones.map((x, i) => i === n ? { ...x, ...c } : x) });
                                 const insumo = insumos.find(i => String(i.id) === o.producto_id);
                                 return (
-                                    <div key={n} className="space-y-2 rounded-lg border border-gray-200 p-2">
+                                    <div key={n} className={`space-y-2 rounded-lg border border-gray-200 p-2 ${o.activo ? '' : 'bg-gray-50 opacity-70'}`}>
                                         <div className="flex gap-2">
                                             <input className={inputClass} value={o.nombre} maxLength={80} placeholder="Ej.: Deslactosada"
                                                 onChange={e => cambiar({ nombre: e.target.value })} />
@@ -225,6 +236,14 @@ export default function ModificadoresPanel() {
                                                     </select>
                                                 </>
                                             )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-4 px-1 text-sm text-gray-700">
+                                            <label className="flex items-center gap-2" title="Siempre va marcada y no se puede quitar">
+                                                <input type="checkbox" className="h-4 w-4" checked={o.obligatorio} onChange={e => cambiar({ obligatorio: e.target.checked })} /> Obligatorio</label>
+                                            <label className="flex items-center gap-2" title="Al elegirla se quitan las demás opciones del grupo">
+                                                <input type="checkbox" className="h-4 w-4" checked={o.exclusiva} onChange={e => cambiar({ exclusiva: e.target.checked })} /> Una sola</label>
+                                            <label className="flex items-center gap-2" title="Apagada no sale al vender">
+                                                <input type="checkbox" className="h-4 w-4" checked={o.activo} onChange={e => cambiar({ activo: e.target.checked })} /> Activa</label>
                                         </div>
                                     </div>
                                 );
