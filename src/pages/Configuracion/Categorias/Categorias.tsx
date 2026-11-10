@@ -64,7 +64,7 @@ export default function CategoriasConfig() {
             name: "Acciones",
             width: "200px",
             cell: (row: CategoriasInterface) => {
-                // Solo se borra si ningún producto la usa; si no, se desactiva
+                // Solo se borra si ningún producto la usa (si no, el botón no aparece: se desactiva)
                 const enUso = (row.productos_count ?? 0) > 0;
                 return (
                     <div className="flex justify-center gap-2">
@@ -74,14 +74,15 @@ export default function CategoriasConfig() {
                         >
                             Editar
                         </button>
-                        <button
-                            onClick={() => setBorrando(row)}
-                            disabled={enUso}
-                            title={enUso ? `La usan ${row.productos_count} producto(s): desactívala en su lugar` : "Borrar categoría"}
-                            className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-red-50"
-                        >
-                            Borrar
-                        </button>
+                        {!enUso && (
+                            <button
+                                onClick={() => setBorrando(row)}
+                                title="Borrar categoría"
+                                className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition"
+                            >
+                                Borrar
+                            </button>
+                        )}
                     </div>
                 );
             },

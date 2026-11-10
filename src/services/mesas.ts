@@ -83,6 +83,7 @@ export const imprimirComanda = async (id: number) =>
 export interface TerminalConfigInterface {
     id: number; nombre: string; tipo: "mesa" | "caja"; zona: string | null; capacidad: number; orden: number;
     caja_id: number | null; caja: string | null; activo: boolean; ocupada: boolean;
+    usada?: boolean; // ya tuvo órdenes: no se borra, se desactiva
 }
 
 export const getTerminalesConfig = async () =>
@@ -101,10 +102,18 @@ export const getAreasConfig = async () =>
         categorias: { id: number; nombre: string; area_preparacion_id: number | null }[];
     };
 
-export interface AreaConfigInterface { id: number; nombre: string; color: string; impresora_id: number | null; activo: boolean }
+// usada: ya recibió comandas, no se borra (se desactiva)
+export interface AreaConfigInterface { id: number; nombre: string; color: string; impresora_id: number | null; activo: boolean; usada?: boolean }
 
 export const guardarArea = async (datos: Omit<AreaConfigInterface, "id">, id?: number) =>
     (id ? await api.put(`/mesas/config/areas/${id}`, datos) : await api.post("/mesas/config/areas", datos)).data as { message: string };
+
+// Solo si nunca se usaron; si no, el servidor responde 422 con el motivo
+export const borrarTerminal = async (id: number) =>
+    (await api.delete(`/mesas/config/terminales/${id}`)).data as { message: string };
+
+export const borrarArea = async (id: number) =>
+    (await api.delete(`/mesas/config/areas/${id}`)).data as { message: string };
 
 export const asignarCategorias = async (asignaciones: { categoria_id: number; area_id: number | null }[]) =>
     (await api.put("/mesas/config/categorias", { asignaciones })).data as { message: string };

@@ -7,10 +7,11 @@ import FormField, { inputClass } from '../../../components/form/FormField';
 import MoneyInput from '../../../components/form/MoneyInput';
 import { useCaja } from '../../../context/CajaContext';
 import {
-    AreaConfigInterface, asignarCategorias, getAreasConfig, getTerminalesConfig, guardarArea,
+    AreaConfigInterface, asignarCategorias, borrarArea, borrarTerminal, getAreasConfig, getTerminalesConfig, guardarArea,
     guardarTerminal, ordenarTerminales, TerminalConfigInterface,
 } from '../../../services/mesas';
 import { mensajeError } from '../../../utils/formato';
+import ConfirmDeleteModal from '../../../components/modal/ConfirmDeleteModal';
 import Cargando, { FilaCargando } from '../../../components/ui/loading/Cargando';
 
 type Pestana = 'terminales' | 'areas';
@@ -52,6 +53,18 @@ export default function MesasConfig() {
     const [impresoras, setImpresoras] = useState<{ id: number; nombre: string; uso: string }[]>([]);
     const [categorias, setCategorias] = useState<{ id: number; nombre: string; area_preparacion_id: number | null }[]>([]);
     const [area, setArea] = useState<(Omit<AreaConfigInterface, 'id'> & { id?: number }) | null>(null);
+
+    // Borrar: solo terminales y áreas que nunca se usaron (el botón no aparece en las usadas)
+    const [borrando, setBorrando] = useState<{ tipo: 'terminal' | 'area'; id: number; nombre: string } | null>(null);
+    const confirmarBorrado = () => {
+        if (!borrando) return;
+        const { tipo, id } = borrando;
+        guardar(() => (tipo === 'terminal' ? borrarTerminal(id) : borrarArea(id)), () => setBorrando(null));
+    };
+    const botonBorrar = (tipo: 'terminal' | 'area', id: number, nombre: string) => (
+        <button type="button" onClick={e => { e.stopPropagation(); setBorrando({ tipo, id, nombre }); }}
+            className="rounded-md bg-red-50 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-100">Borrar</button>
+    );
 
 
     const cargar = useCallback(() => {
@@ -121,10 +134,10 @@ export default function MesasConfig() {
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
                                 <tr><th className="w-10 px-2 py-3" /><th className="px-4 py-3">Posición</th><th className="px-4 py-3">Nombre</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Zona</th>
-                                    <th className="px-4 py-3 text-right">Personas</th><th className="px-4 py-3">Estado</th></tr>
+                                    <th className="px-4 py-3 text-right">Personas</th><th className="px-4 py-3">Estado</th><th className="w-24 px-4 py-3" /></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {!cargado && <FilaCargando colSpan={7} />}
+                                {!cargado && <FilaCargando colSpan={8} />}
                                 {terminales.map((t, n) => (
                                     <tr key={t.id} onClick={() => setTerminal(t)} draggable
                                         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(t.id); }}
@@ -141,6 +154,7 @@ export default function MesasConfig() {
                                         <td className="px-4 py-3">
                                             <StatusBadge tone={!t.activo ? 'neutral' : t.ocupada ? 'warning' : 'success'}>{!t.activo ? 'Inactiva' : t.ocupada ? 'Ocupada' : 'Activa'}</StatusBadge>
                                         </td>
+                                        <td className="px-4 py-3 text-right">{!t.usada && botonBorrar('terminal', t.id, t.nombre)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -205,6 +219,7 @@ export default function MesasConfig() {
                                         <span className="block text-xs text-gray-500">🖨 {impresoras.find(i => i.id === a.impresora_id)?.nombre ?? 'Impresora general'}</span>
                                     </span>
                                     {!a.activo && <StatusBadge tone="neutral">Inactiva</StatusBadge>}
+                                    {!a.usada && botonBorrar('area', a.id, a.nombre)}
                                 </li>
                             ))}
                         </ul>
@@ -259,7 +274,15 @@ export default function MesasConfig() {
                 </Ventana>
             )}
 
-
+            <ConfirmDeleteModal
+                isOpen={!!borrando}
+                onClose={() => setBorrando(null)}
+                onConfirm={confirmarBorrado}
+                isDeleting={guardando}
+                title={borrando?.tipo === 'area' ? 'Borrar área' : 'Borrar terminal'}
+                description={borrando?.tipo === 'area' ? 'Nunca ha recibido comandas. Se borra definitivamente.' : 'Nunca ha tenido órdenes. Se borra definitivamente.'}
+                itemName={borrando?.nombre ?? ''}
+            />
         </div>
     );
 }
