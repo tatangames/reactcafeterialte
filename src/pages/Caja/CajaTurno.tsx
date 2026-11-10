@@ -43,6 +43,14 @@ export default function CajaTurno() {
 
     const [fondo, setFondo] = useState('');
     const [obsApertura, setObsApertura] = useState('');
+    // El efectivo no se retira al cerrar: lo que quedó es el fondo del nuevo turno
+    const quedo = !turno ? actual?.fondo_sugerido ?? null : null;
+    const [fondoDe, setFondoDe] = useState<number | null>(null);
+    if (quedo !== null && fondoDe !== quedo) {
+        setFondoDe(quedo);
+        setFondo(String(quedo));
+    }
+    const fondoDistinto = quedo !== null && Math.abs(Number(fondo || 0) - quedo) >= 0.005;
     const [verCorte, setVerCorte] = useState(false);
     const [abriendoCajon, setAbriendoCajon] = useState(false);
 
@@ -98,18 +106,28 @@ export default function CajaTurno() {
                             <h2 className="text-lg font-semibold text-gray-800">Abrir turno</h2>
                             <p className="text-sm text-gray-500">Indica el efectivo con el que inicia la gaveta.</p>
                         </div>
+                        {quedo !== null && (
+                            <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                                En la caja quedaron <strong>{dinero(quedo)}</strong> del turno anterior: ese es el fondo con el que abre este turno.
+                            </p>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Fondo inicial</label>
                             <MoneyInput value={fondo} onChange={setFondo} prefix="$" placeholder="0.00" />
                         </div>
+                        {fondoDistinto && (
+                            <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                                Es distinto a lo que quedó ({dinero(quedo!)}). Escribe en observaciones por qué.
+                            </p>
+                        )}
                         <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
                             El turno queda a nombre de <strong>{user?.nombre}</strong>. Si atiende otra persona, cierra sesión y que entre con su usuario.
                         </p>
                         <textarea value={obsApertura} onChange={e => setObsApertura(e.target.value)} rows={2} maxLength={500}
-                            placeholder="Observaciones (opcional)"
+                            placeholder={fondoDistinto ? 'Observaciones (obligatorio: ej. el dueño retiró $…)' : 'Observaciones (opcional)'}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-400 focus:outline-none resize-none" />
                         <div className="flex flex-wrap gap-3">
-                            <button type="button" disabled={guardando}
+                            <button type="button" disabled={guardando || (fondoDistinto && obsApertura.trim().length < 3)}
                                 onClick={() => abrir(Number(fondo || 0), obsApertura.trim() || undefined)}
                                 className={`${botonGrande} bg-green-600 hover:bg-green-700`}>
                                 {guardando ? 'Abriendo...' : 'Abrir turno'}

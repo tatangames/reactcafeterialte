@@ -143,7 +143,7 @@ export default function CajaCierre() {
                 <div className="lg:col-span-2 space-y-6">
                 <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <h2 className="mb-1 text-lg font-semibold text-gray-800">Cuenta el efectivo de la gaveta</h2>
-                    <p className="mb-4 text-sm text-gray-500">Escribe el total de la gaveta. Incluye el fondo inicial; las ventas con tarjeta o transferencia no se cuentan aquí.</p>
+                    <p className="mb-4 text-sm text-gray-500">Escribe el total de la gaveta. Incluye el fondo inicial; las ventas con tarjeta o transferencia no se cuentan aquí. El dinero se queda en la caja: es el fondo del siguiente turno.</p>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Efectivo contado</label>
                     <div className="max-w-xs">
                         <MoneyInput value={contado} onChange={setContado} prefix="$" placeholder="0.00" />

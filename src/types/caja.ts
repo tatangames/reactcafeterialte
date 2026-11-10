@@ -161,7 +161,9 @@ export interface TurnoActualResponseInterface extends Partial<Omit<TurnoDetalleI
     // Datos del negocio → «Avisar si no alcanza el cambio»
     aviso_cambio?: boolean;
     // Solo sin turno abierto: quién cerró el anterior y qué dejó por comprar
-    turno_anterior?: { id: number; cerrado_at: string | null; cerro: string | null } | null;
+    turno_anterior?: { id: number; cerrado_at: string | null; cerro: string | null; efectivo_contado: number | null } | null;
+    // Lo que quedó en la gaveta al cerrar el anterior: el efectivo no se retira, es el fondo del nuevo turno
+    fondo_sugerido?: number | null;
     por_comprar?: PorComprarInterface[];
 }
 
