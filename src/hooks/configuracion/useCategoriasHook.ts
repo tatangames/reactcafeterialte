@@ -5,10 +5,12 @@ import {
     getCategoriasTable,
     crearCategoria,
     actualizarCategoria,
+    borrarCategoria,
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import { CategoriasInterface } from "../../types/interfaces";
 import { sinTildes } from "../../utils/texto";
+import { mensajeError } from "../../utils/formato";
 
 export function useCategorias() {
     const [data, setData] = useState<CategoriasInterface[]>([]);
@@ -21,6 +23,8 @@ export function useCategorias() {
 
     const [isCreating, setIsCreating] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [borrando, setBorrando] = useState<CategoriasInterface | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchCategorias();
@@ -84,6 +88,21 @@ export function useCategorias() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!borrando) return;
+        setIsDeleting(true);
+        try {
+            const response = await borrarCategoria(getToken()!, borrando.id);
+            toast.success(response.message || "Categoría borrada");
+            setBorrando(null);
+            fetchCategorias();
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo borrar la categoría"));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const handleEdit = (row: CategoriasInterface) => {
         setSelectedCategoria(row);
         setIsEditModalOpen(true);
@@ -113,5 +132,10 @@ export function useCategorias() {
         handleCreate,
         handleUpdate,
         handleEdit,
+
+        borrando,
+        setBorrando,
+        isDeleting,
+        handleDelete,
     };
 }

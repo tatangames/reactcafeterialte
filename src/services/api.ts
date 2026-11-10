@@ -477,6 +477,14 @@ export const crearCategoria = async (
     return data;
 };
 
+// BORRAR CATEGORIA (solo si ningún producto la usa; si no, el servidor responde 422)
+export const borrarCategoria = async (token: string, id: number) => {
+    const { data } = await api.delete(`/admin/categorias/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    return data;
+};
+
 // ACTUALIZAR CATEGORIA
 export const actualizarCategoria = async (
     token: string,

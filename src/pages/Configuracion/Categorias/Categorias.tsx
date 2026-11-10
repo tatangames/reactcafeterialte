@@ -2,6 +2,7 @@ import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../../components/Loading/LoadingModal";
 import EntidadNombreModal from "../../../components/modal/EntidadNombreModal";
+import ConfirmDeleteModal from "../../../components/modal/ConfirmDeleteModal";
 import EntidadNombreEstadoModal from "../../../components/modal/EntidadNombreEstadoModal";
 import { useCategorias } from "../../../hooks/configuracion/useCategoriasHook";
 import { CategoriasInterface } from "../../../types/interfaces";
@@ -23,6 +24,10 @@ export default function CategoriasConfig() {
         handleCreate,
         handleUpdate,
         handleEdit,
+        borrando,
+        setBorrando,
+        isDeleting,
+        handleDelete,
     } = useCategorias();
 
     const columns = [
@@ -50,18 +55,36 @@ export default function CategoriasConfig() {
             ),
         },
         {
-            name: "Acciones",
+            name: "Productos",
             width: "120px",
-            cell: (row: CategoriasInterface) => (
-                <div className="flex justify-center">
-                    <button
-                        onClick={() => handleEdit(row)}
-                        className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
-                    >
-                        Editar
-                    </button>
-                </div>
-            ),
+            sortable: true,
+            selector: (row: CategoriasInterface) => row.productos_count ?? 0,
+        },
+        {
+            name: "Acciones",
+            width: "200px",
+            cell: (row: CategoriasInterface) => {
+                // Solo se borra si ningún producto la usa; si no, se desactiva
+                const enUso = (row.productos_count ?? 0) > 0;
+                return (
+                    <div className="flex justify-center gap-2">
+                        <button
+                            onClick={() => handleEdit(row)}
+                            className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
+                        >
+                            Editar
+                        </button>
+                        <button
+                            onClick={() => setBorrando(row)}
+                            disabled={enUso}
+                            title={enUso ? `La usan ${row.productos_count} producto(s): desactívala en su lugar` : "Borrar categoría"}
+                            className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-red-50"
+                        >
+                            Borrar
+                        </button>
+                    </div>
+                );
+            },
         },
     ];
 
@@ -94,6 +117,16 @@ export default function CategoriasConfig() {
                     maxLength={100}
                 />
             )}
+
+            <ConfirmDeleteModal
+                isOpen={!!borrando}
+                onClose={() => setBorrando(null)}
+                onConfirm={handleDelete}
+                isDeleting={isDeleting}
+                title="Borrar categoría"
+                description="Ningún producto la usa. Se borra definitivamente."
+                itemName={borrando?.nombre ?? ""}
+            />
 
             <div className="p-6">
                 <div className="mb-6">

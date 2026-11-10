@@ -45,6 +45,7 @@ export interface CategoriasInterface {
     estado: boolean;
     area_preparacion_id?: number | null;
     area?: { id: number; nombre: string } | null; // a qué comanda van sus productos
+    productos_count?: number; // productos que la usan: con 0 se puede borrar
 }
 
 export type ClaseProducto = "producto_terminado" | "materia_prima" | "reventa" | "empaque";
