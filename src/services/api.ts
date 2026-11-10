@@ -412,6 +412,14 @@ export const crearUnidadMedida = async (
     return data;
 };
 
+// BORRAR UNIDAD DE MEDIDA (solo si nada la usa; si no, el servidor responde 422)
+export const borrarUnidadMedida = async (token: string, id: number) => {
+    const { data } = await api.delete(`/admin/unidadmedida/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    return data;
+};
+
 // ACTUALIZAR UNIDAD DE MEDIDA
 export const actualizarUnidadMedida = async (
     token: string,

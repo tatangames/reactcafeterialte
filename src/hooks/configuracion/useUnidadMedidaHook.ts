@@ -5,10 +5,12 @@ import {
     getUnidadMedidaTable,
     crearUnidadMedida,
     actualizarUnidadMedida,
+    borrarUnidadMedida,
 } from "../../services/api";
 import { getToken } from "../../utils/auth";
 import {UnidadMedidaFormInterface, UnidadMedidaInterface} from "../../types/interfaces.ts";
 import { sinTildes } from "../../utils/texto";
+import { mensajeError } from "../../utils/formato";
 
 
 
@@ -23,6 +25,8 @@ export function useUnidadMedida() {
 
     const [isCreating, setIsCreating] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [borrando, setBorrando] = useState<UnidadMedidaInterface | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchUnidades();
@@ -91,6 +95,21 @@ export function useUnidadMedida() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!borrando) return;
+        setIsDeleting(true);
+        try {
+            const response = await borrarUnidadMedida(getToken()!, borrando.id);
+            toast.success(response.message || "Unidad de medida borrada");
+            setBorrando(null);
+            fetchUnidades();
+        } catch (error) {
+            toast.error(mensajeError(error, "No se pudo borrar la unidad de medida"));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const handleEdit = (row: UnidadMedidaInterface) => {
         setSelectedUnidad(row);
         setIsEditModalOpen(true);
@@ -126,5 +145,9 @@ export function useUnidadMedida() {
         handleCreate,
         handleUpdate,
         handleEdit,
+        borrando,
+        setBorrando,
+        isDeleting,
+        handleDelete,
     };
 }

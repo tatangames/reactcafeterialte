@@ -1,6 +1,7 @@
 import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../../components/Loading/LoadingModal";
+import ConfirmDeleteModal from "../../../components/modal/ConfirmDeleteModal";
 import UnidadMedidaModal from "../../../components/modal/UnidadMedidaModal";
 import { useUnidadMedida } from "../../../hooks/configuracion/useUnidadMedidaHook.ts";
 import { UnidadMedidaInterface } from "../../../types/interfaces.ts";
@@ -22,6 +23,10 @@ export default function UnidadMedidaConfig() {
         handleCreate,
         handleUpdate,
         handleEdit,
+        borrando,
+        setBorrando,
+        isDeleting,
+        handleDelete,
     } = useUnidadMedida();
 
     const columns = [
@@ -71,15 +76,24 @@ export default function UnidadMedidaConfig() {
         },
         {
             name: "Acciones",
-            width: "120px",
+            width: "200px",
             cell: (row: UnidadMedidaInterface) => (
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-2">
                     <button
                         onClick={() => handleEdit(row)}
                         className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
                     >
                         Editar
                     </button>
+                    {/* Solo si nada la usa (productos, recetas, compras, extras); si no, se desactiva */}
+                    {!row.usada && (
+                        <button
+                            onClick={() => setBorrando(row)}
+                            className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition"
+                        >
+                            Borrar
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -108,6 +122,16 @@ export default function UnidadMedidaConfig() {
                     unidad={selectedUnidad}
                 />
             )}
+
+            <ConfirmDeleteModal
+                isOpen={!!borrando}
+                onClose={() => setBorrando(null)}
+                onConfirm={handleDelete}
+                isDeleting={isDeleting}
+                title="Borrar unidad de medida"
+                description="Nada la usa. Se borra definitivamente."
+                itemName={borrando?.nombre ?? ""}
+            />
 
             <div className="p-6">
                 <div className="mb-6">

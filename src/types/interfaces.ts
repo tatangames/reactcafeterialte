@@ -29,6 +29,7 @@ export interface UnidadMedidaInterface {
     tipo: TipoUnidad;
     factor_base: string;
     estado: boolean;
+    usada?: boolean; // la usan productos, recetas, compras o extras: no se borra
 }
 
 export interface UnidadMedidaFormInterface {
