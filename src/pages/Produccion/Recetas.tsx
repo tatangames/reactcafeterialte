@@ -299,6 +299,7 @@ export default function Recetas() {
                                 <p><b>Volver atrás:</b> si el cambio salió mal, abre la receta y en Versiones toca «Usar esta versión» en la anterior. Solo una versión está activa a la vez.</p>
                             </div>
                         )}
+                        {detalle.ingredientes_ocultos ? <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Tu rol no tiene permiso para ver los ingredientes de la receta.</p> : (
                         <div className="overflow-x-auto rounded-lg border border-gray-200">
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
@@ -317,7 +318,7 @@ export default function Recetas() {
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
+                        </div>)}
                         <div className="flex flex-wrap justify-end gap-6 text-sm">
                             <span>Tanda: <strong>{dinero(detalle.costo_total)}</strong></span>
                             <span>Por {detalle.unidad ?? 'unidad'}: <strong>{costo4(detalle.costo_unitario)}</strong></span>

@@ -61,7 +61,7 @@ export default function ResumenProduccion() {
                         </div>
                     </section>
 
-                    <section>
+                    {!datos.ingredientes_ocultos && <section>
                         <h2 className="mb-2 font-semibold text-gray-800">Consumo de ingredientes (real frente a receta)</h2>
                         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                             <table className="w-full text-sm">
@@ -82,7 +82,7 @@ export default function ResumenProduccion() {
                                 </tbody>
                             </table>
                         </div>
-                    </section>
+                    </section>}
 
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <section>

@@ -176,6 +176,7 @@ export default function Produccion() {
                             <div className="rounded-lg bg-gray-50 p-3"><p className="text-gray-500">Costo</p><p className="text-lg font-semibold">{dinero(detalle.costo_total)}</p>
                                 <p className="text-gray-500">{dinero(detalle.costo_unitario, '$', 4)} c/u</p></div>
                         </div>
+                        {detalle.ingredientes_ocultos ? <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Tu rol no tiene permiso para ver los ingredientes de la receta.</p> : (
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
                                 <tr><th className="px-3 py-2">Ingrediente</th><th className="px-3 py-2 text-right">Teórico</th><th className="px-3 py-2 text-right">Real</th>
@@ -193,7 +194,7 @@ export default function Produccion() {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </table>)}
                         {detalle.observaciones && <p className="text-sm text-gray-600">Obs.: {detalle.observaciones}</p>}
                         <div className="flex justify-end gap-2 pt-2">
                             {puedeRegistrar && detalle.estado === 'registrada' && (
@@ -234,6 +235,7 @@ export default function Produccion() {
 
                     {receta && (
                         <>
+                            {receta.ingredientes_ocultos ? <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Tu rol no tiene permiso para ver los ingredientes de la receta.</p> : (
                             <div className="overflow-x-auto rounded-lg border border-gray-200">
                                 <table className="w-full min-w-[560px] text-sm">
                                     <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
@@ -256,14 +258,14 @@ export default function Produccion() {
                                         ))}
                                     </tbody>
                                 </table>
-                            </div>
+                            </div>)}
                             {consumos.some(c => c.falta) && <p className="text-sm text-red-600">No hay existencia suficiente de algún ingrediente: registra primero la compra o el ajuste.</p>}
                             <FormField label="Observaciones">
                                 <input className={inputClass} value={observaciones} onChange={e => setObservaciones(e.target.value)} maxLength={500} />
                             </FormField>
                             <div className="flex flex-wrap items-center justify-end gap-4">
-                                <span className="text-sm text-gray-600">Costo estimado: <strong>{dinero(costoEstimado)}</strong>
-                                    {prod > 0 && <> · {dinero(costoEstimado / prod, '$', 4)} por {receta.unidad ?? 'unidad'}</>}</span>
+                                {!receta.ingredientes_ocultos && <span className="text-sm text-gray-600">Costo estimado: <strong>{dinero(costoEstimado)}</strong>
+                                    {prod > 0 && <> · {dinero(costoEstimado / prod, '$', 4)} por {receta.unidad ?? 'unidad'}</>}</span>}
                                 <button type="button" onClick={registrar} disabled={guardando || prod <= 0 || Number(planificada || 0) <= 0}
                                     className="px-6 py-3 rounded-xl bg-green-600 text-base font-bold text-white hover:bg-green-700 disabled:opacity-50">
                                     {guardando ? 'Registrando...' : 'Registrar producción'}

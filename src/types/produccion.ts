@@ -66,6 +66,8 @@ export interface RecetaInterface {
     precio_venta: number;
     margen: number | null;
     ingredientes?: IngredienteRecetaInterface[];
+    // true cuando el rol no tiene «produccion.ver_receta»: llegan sin ingredientes ni notas
+    ingredientes_ocultos?: boolean;
     versiones?: { id: number; version: number; activa: boolean; actualizada: string }[];
 }
 
@@ -89,6 +91,7 @@ export interface ProduccionInterface {
     turno?: string | null;
     motivo_anulacion: string | null;
     creada: string;
+    ingredientes_ocultos?: boolean;
     consumos?: {
         producto_id: number;
         producto: string | null;
@@ -129,6 +132,7 @@ export interface ResumenProduccionInterface {
         planificada: number; producida: number; rendimiento: number | null; costo_total: number; costo_unitario: number;
     }[];
     consumos: { producto_id: number; producto: string; unidad: string | null; teorica: number; real: number; diferencia: number; costo: number }[];
+    ingredientes_ocultos?: boolean;
     mermas: {
         por_motivo: { motivo: MotivoMerma; texto: string; cantidad: number; costo: number }[];
         por_producto: { producto_id: number; producto: string; cantidad: number; costo: number }[];
