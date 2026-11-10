@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import AyudaClases from "./AyudaClases";
 import FormField, { inputClass } from "../form/FormField";
 import MoneyInput from "../form/MoneyInput";
+import SelectBuscador from "../form/SelectBuscador";
 import OrdenPosCampo from "./OrdenPosCampo";
 import { CategoriasInterface, ClaseProducto, ProductoFormInterface, UnidadMedidaInterface } from "../../types/interfaces";
 import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
@@ -131,14 +132,10 @@ export default function ProductoFormulario({
                             </select>
                         </FormField>
                         <FormField label="Unidad de medida" required hint="En la que se cuenta el inventario">
-                            <select value={form.unidad_medida_id} onChange={(e) => onChange("unidad_medida_id", e.target.value)} className={inputClass}>
-                                <option value="">Selecciona...</option>
-                                {unidades.map((u) => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.nombre}{u.abreviatura ? ` (${u.abreviatura})` : ""}
-                                    </option>
-                                ))}
-                            </select>
+                            <SelectBuscador value={form.unidad_medida_id ? Number(form.unidad_medida_id) : null}
+                                onChange={(v) => onChange("unidad_medida_id", v ? String(v) : "")}
+                                placeholder="Buscar unidad..."
+                                opciones={unidades.map((u) => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ""}` }))} />
                         </FormField>
                     </div>
 
