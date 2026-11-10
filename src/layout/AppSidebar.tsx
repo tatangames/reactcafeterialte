@@ -225,7 +225,7 @@ const navItems: NavItem[] = [
       {
         name: "Catálogo de Productos",
         path: "/admin/productos/index",
-        permissions: ["productos.ver", "productos.gestionar"],
+        permissions: ["productos.ver", "productos.gestionar", "mesas.configurar"],
       },
       {
         name: "Ordenar POS",

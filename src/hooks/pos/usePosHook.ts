@@ -142,10 +142,12 @@ export function usePosHook() {
 
     // Precio y nombres de los extras elegidos, con los datos del catálogo
     const conExtras = (producto: ProductoPosInterface, modificadores: number[]) => {
-        const opciones = (catalogo?.grupos ?? []).flatMap((g) => g.opciones).filter((o) => modificadores.includes(o.id));
+        // Un id repetido es la opción pedida varias veces: cobra cada una y se muestra «Huevo extra ×2»
+        const opciones = (catalogo?.grupos ?? []).flatMap((g) => g.opciones)
+            .map((o) => ({ ...o, veces: modificadores.filter((id) => id === o.id).length })).filter((o) => o.veces > 0);
         return {
-            precio: Math.round((producto.precio + opciones.reduce((t, o) => t + o.precio, 0)) * 100) / 100,
-            extras: opciones.map((o) => o.nombre),
+            precio: Math.round((producto.precio + opciones.reduce((t, o) => t + o.precio * o.veces, 0)) * 100) / 100,
+            extras: opciones.map((o) => `${o.nombre}${o.veces > 1 ? ` ×${o.veces}` : ""}`),
         };
     };
 

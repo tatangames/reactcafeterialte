@@ -1,5 +1,5 @@
 import { ConfiguracionNegocioInterface } from "../../types/interfaces";
-import { OrdenInterface, TicketOrdenInterface } from "../../types/mesas";
+import { OrdenInterface, TicketOrdenInterface, textoModificador } from "../../types/mesas";
 import { cantidad, dinero, fechaHora, fechaLocal } from "../../utils/formato";
 
 // Precuenta de 80 mm para revisar con el cliente antes de cobrar (no es comprobante)
@@ -20,7 +20,7 @@ export default function PrecuentaImprimible({ orden, ticket, negocio }: {
                 <div key={i.id} className="mb-1">
                     <p>{i.nombre}</p>
                     {/* Extras y cambios debajo, un renglón cada uno con «*», como en la comanda */}
-                    {i.modificadores.map((m) => <p key={m.id} className="pl-3">* {m.opcion}{m.precio > 0 ? ` (+${dinero(m.precio)})` : ""}</p>)}
+                    {i.modificadores.map((m) => <p key={m.id} className="pl-3">* {textoModificador(m)}{m.precio > 0 ? ` (+${dinero(m.precio * (m.cantidad ?? 1))})` : ""}</p>)}
                     {(i.texto_ajustes ?? []).map((t) => <p key={t} className="pl-3">* {t}</p>)}
                     <div className="flex justify-between gap-3">
                         <span>  {cantidad(i.cantidad)} x {dinero(i.precio_unitario)}</span>

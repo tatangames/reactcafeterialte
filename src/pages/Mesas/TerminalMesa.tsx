@@ -30,8 +30,7 @@ import { cantidad, dinero, mensajeError, fechaHora } from '../../utils/formato';
 import { ConfiguracionNegocioInterface } from '../../types/interfaces';
 import {
     CatalogoMesasInterface, ComandaInterface, ESTADOS_COMANDA, ESTADOS_ITEM, ItemOrdenInterface, OrdenInterface, ProductoMesaInterface,
-    TerminalMapaInterface, transcurrido,
-} from '../../types/mesas';
+    TerminalMapaInterface, transcurrido, idsModificadores, textoModificador } from '../../types/mesas';
 import { DescuentoInterface, PagoFormInterface, VentaInterface } from '../../types/pos';
 import { sinTildes } from '../../utils/texto';
 import { useAuth } from '../../context/AuthContext';
@@ -606,7 +605,7 @@ export default function TerminalMesa() {
                                     )}
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium leading-tight text-gray-800">{i.nombre}</p>
-                                        {i.modificadores.length > 0 && <p className="text-xs text-gray-500">{i.modificadores.map(m => `+ ${m.opcion}`).join(' · ')}</p>}
+                                        {i.modificadores.length > 0 && <p className="text-xs text-gray-500">{i.modificadores.map(m => `+ ${textoModificador(m)}`).join(' · ')}</p>}
                                         {(i.texto_ajustes ?? []).length > 0 && <p className="text-xs font-semibold text-red-700">{i.texto_ajustes.map(t => `! ${t}`).join(' · ')}</p>}
                                         {i.notas && <p className="text-xs italic text-gray-500">{i.notas}</p>}
                                         {i.estado === 'cancelado' && i.motivo_cancelacion && <p className="text-xs text-red-600">Cancelado: {i.motivo_cancelacion}</p>}
@@ -694,7 +693,7 @@ export default function TerminalMesa() {
             <ModificadoresModal producto={conExtras} grupos={catalogo?.grupos ?? []} onCancel={() => setConExtras(null)}
                 onConfirm={d => { const p = conExtras; setConExtras(null); if (p) agregar(p, d); }} />
             <ModificadoresModal producto={editandoExtras ? productoDe(editandoExtras.producto_id) : null} grupos={catalogo?.grupos ?? []}
-                inicial={editandoExtras ? { modificadores: editandoExtras.modificadores.map(m => m.id), cantidad: editandoExtras.cantidad, notas: editandoExtras.notas ?? '' } : null}
+                inicial={editandoExtras ? { modificadores: idsModificadores(editandoExtras.modificadores), cantidad: editandoExtras.cantidad, notas: editandoExtras.notas ?? '' } : null}
                 onCancel={() => setEditandoExtras(null)}
                 onConfirm={async d => {
                     if (!editandoExtras) return;

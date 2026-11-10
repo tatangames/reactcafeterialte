@@ -21,16 +21,18 @@ export default function ModificadoresModal(props: Props) {
 }
 
 function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & { producto: NonNullable<Props["producto"]> }) {
+    // Por grupo, los ids elegidos; uno repetido es la misma opción pedida varias veces (Huevo extra ×2)
     const [elegidos, setElegidos] = useState<Record<number, number[]>>(() => {
         const ids = inicial?.modificadores ?? [];
         return Object.fromEntries(grupos.filter((g) => producto.grupos.includes(g.id))
-            .map((g) => [g.id, g.opciones.filter((o) => ids.includes(o.id)).map((o) => o.id)]));
+            .map((g) => [g.id, g.opciones.flatMap((o) => ids.filter((x) => x === o.id))]));
     });
     const [cantidad, setCantidad] = useState(inicial?.cantidad ?? 1);
     const [notas, setNotas] = useState(inicial?.notas ?? "");
 
     const suyos = grupos.filter((g) => producto.grupos.includes(g.id));
-    const extra = suyos.reduce((s, g) => s + g.opciones.filter((o) => elegidos[g.id]?.includes(o.id)).reduce((t, o) => t + o.precio, 0), 0);
+    const veces = (g: GrupoModificadorInterface, id: number) => (elegidos[g.id] ?? []).filter((x) => x === id).length;
+    const extra = suyos.reduce((s, g) => s + g.opciones.reduce((t, o) => t + o.precio * veces(g, o.id), 0), 0);
     const faltan = suyos.filter((g) => g.obligatorio && !(elegidos[g.id]?.length));
     const unitario = producto.precio + extra;
 
@@ -41,6 +43,17 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                 ? actuales.filter((x) => x !== id)
                 : g.multiple ? [...actuales, id] : [id];
             return { ...e, [g.id]: siguiente };
+        });
+
+    // Opción con máximo (Huevo extra hasta 3): + y − cambian cuántas van
+    const cambiarVeces = (g: GrupoModificadorInterface, id: number, delta: number, maximo: number) =>
+        setElegidos((e) => {
+            const actuales = e[g.id] ?? [];
+            const n = actuales.filter((x) => x === id).length;
+            const nuevo = Math.min(maximo, Math.max(0, n + delta));
+            // En un grupo de una sola opción, elegir esta quita las demás
+            const otros = g.multiple ? actuales.filter((x) => x !== id) : [];
+            return { ...e, [g.id]: [...otros, ...Array<number>(nuevo).fill(id)] };
         });
 
     return (
@@ -62,6 +75,25 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                                     const activo = elegidos[g.id]?.includes(o.id);
                                     // Sin existencia de su insumo no se elige (si ya venía elegida, se puede quitar)
                                     const agotada = !!o.agotado && !activo;
+                                    const maximo = Math.max(1, o.maximo ?? 1);
+                                    if (maximo > 1 && !agotada) {
+                                        const n = veces(g, o.id);
+                                        return (
+                                            <div key={o.id} className={`min-h-14 rounded-xl border-2 px-3 py-2 text-sm ${n > 0 ? "border-blue-600 bg-blue-50" : "border-gray-200"}`}>
+                                                <button type="button" onClick={() => n === 0 && cambiarVeces(g, o.id, 1, maximo)} className="block w-full text-left">
+                                                    <span className={`block ${n > 0 ? "font-semibold text-blue-800" : "text-gray-700"}`}>{o.nombre}</span>
+                                                    <span className="text-xs text-gray-500">{o.precio > 0 ? `+${dinero(o.precio)} c/u · ` : ""}hasta {maximo}</span>
+                                                </button>
+                                                <div className="mt-1 flex items-center gap-2">
+                                                    <button type="button" onClick={() => cambiarVeces(g, o.id, -1, maximo)} disabled={n === 0} aria-label={`Quitar ${o.nombre}`}
+                                                        className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">−</button>
+                                                    <span className="w-6 text-center text-base font-bold">{n}</span>
+                                                    <button type="button" onClick={() => cambiarVeces(g, o.id, 1, maximo)} disabled={n >= maximo} aria-label={`Agregar ${o.nombre}`}
+                                                        className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">+</button>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
                                     return (
                                         <button key={o.id} type="button" onClick={() => alternar(g, o.id)} disabled={agotada}
                                             title={agotada ? "No hay existencia de su insumo" : undefined}

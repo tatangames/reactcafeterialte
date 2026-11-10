@@ -184,7 +184,7 @@ export default function App() {
                   <Route
                       path="/admin/productos/index"
                       element={
-                          <PermissionRoute permissions={["productos.ver", "productos.gestionar"]}>
+                          <PermissionRoute permissions={["productos.ver", "productos.gestionar", "mesas.configurar"]}>
                               <ProductosCatalogo />
                           </PermissionRoute>
                       }

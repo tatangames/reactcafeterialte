@@ -112,7 +112,7 @@ export const asignarCategorias = async (asignaciones: { categoria_id: number; ar
 export interface GrupoConfigInterface {
     id: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
     opciones: {
-        id: number; nombre: string; precio: number; activo: boolean;
+        id: number; nombre: string; precio: number; activo: boolean; maximo?: number;
         producto_id: number | null; insumo: string | null; cantidad: number | null; unidad_medida_id: number | null; unidad: string | null;
     }[];
     productos: { id: number; nombre: string }[];
@@ -129,7 +129,7 @@ export const getGruposConfig = async () =>
 
 export const guardarGrupo = async (datos: {
     nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
-    opciones: { id?: number; nombre: string; precio: number; producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null }[];
+    opciones: { id?: number; nombre: string; precio: number; maximo: number; producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null }[];
     productos: number[];
 }, id?: number) =>
     (id ? await api.put(`/mesas/config/modificadores/${id}`, datos) : await api.post("/mesas/config/modificadores", datos)).data as { message: string };
