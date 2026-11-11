@@ -130,26 +130,39 @@ export interface GrupoConfigInterface {
 export interface InsumoModificadorInterface { id: number; nombre: string; unidad_medida_id: number | null; unidad: string | null; tipo: string | null }
 export interface UnidadModificadorInterface { id: number; nombre: string; abreviatura: string; tipo: string }
 
+// Tarjeta de modificadores («Bebidas con leche»): sus bloques en orden y los productos que la llevan
+export interface ConjuntoConfigInterface {
+    id: number; nombre: string; bloques: GrupoConfigInterface[]; productos: { id: number; nombre: string }[];
+}
+
+// Una opción al guardar: obligatoria, «una sola» (exclusiva) y activa son de cada opción
+export interface OpcionGuardar {
+    id?: number; nombre: string; precio: number; maximo: number; obligatorio: boolean; exclusiva: boolean; activo: boolean;
+    producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null;
+}
+
 export const getGruposConfig = async () =>
     (await api.get("/mesas/config/modificadores")).data as {
-        grupos: GrupoConfigInterface[]; productos: { id: number; nombre: string }[];
+        conjuntos: ConjuntoConfigInterface[]; grupos: GrupoConfigInterface[];
+        // conjunto_id: la tarjeta que ya lleva (un producto lleva una sola)
+        productos: { id: number; nombre: string; conjunto_id: number | null }[];
         insumos: InsumoModificadorInterface[]; unidades: UnidadModificadorInterface[];
     };
 
-export const guardarGrupo = async (datos: {
+export const guardarConjunto = async (datos: {
     nombre: string;
-    obligatorio: boolean; // = minimo > 0 (para versiones anteriores)
-    minimo: number;        // unidades en total del grupo, contando repeticiones (0 = opcional)
-    maximo: number | null; // null = sin tope
-    // Obligatorio, «una sola» (exclusiva) y activo de cada opción
-    opciones: { id?: number; nombre: string; precio: number; maximo: number; obligatorio: boolean; exclusiva: boolean; activo: boolean; producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null }[];
+    // minimo/maximo: unidades en total del bloque, contando repeticiones (0 = opcional; null = sin tope)
+    bloques: { id?: number; nombre: string; minimo: number; maximo: number | null; opciones: OpcionGuardar[] }[];
     productos: number[];
 }, id?: number) =>
-    (id ? await api.put(`/mesas/config/modificadores/${id}`, datos) : await api.post("/mesas/config/modificadores", datos)).data as { id: number; message: string };
+    (id ? await api.put(`/mesas/config/conjuntos/${id}`, datos) : await api.post("/mesas/config/conjuntos", datos)).data as { id: number; message: string };
 
-// Bloques de un producto (grupos de modificadores) en el orden en que salen al vender
-export const getBloquesProducto = async (productoId: number) =>
-    (await api.get(`/mesas/config/productos/${productoId}/modificadores`)).data as { grupos: number[] };
+export const borrarConjunto = async (id: number) =>
+    (await api.delete(`/mesas/config/conjuntos/${id}`)).data as { message: string };
 
-export const guardarBloquesProducto = async (productoId: number, grupos: number[]) =>
-    (await api.put(`/mesas/config/productos/${productoId}/modificadores`, { grupos })).data as { message: string };
+// La tarjeta de modificadores de un producto (o null)
+export const getConjuntoProducto = async (productoId: number) =>
+    (await api.get(`/mesas/config/productos/${productoId}/modificadores`)).data as { conjunto_id: number | null };
+
+export const asignarConjuntoProducto = async (productoId: number, conjuntoId: number | null) =>
+    (await api.put(`/mesas/config/productos/${productoId}/modificadores`, { conjunto_id: conjuntoId })).data as { message: string };
