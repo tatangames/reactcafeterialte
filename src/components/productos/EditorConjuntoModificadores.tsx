@@ -8,7 +8,7 @@ import {
     BloqueGuardar, ConjuntoConfigInterface, guardarModificadoresProducto, InsumoModificadorInterface, UnidadModificadorInterface,
 } from '../../services/mesas';
 import { mensajeError } from '../../utils/formato';
-import { minimoDe, reglaTexto } from '../../utils/modificadores';
+import { AYUDAS, ClaveAyuda, minimoDe, reglaTexto } from '../../utils/modificadores';
 
 // Una opción del formulario: el insumo es opcional (Revueltos no gasta nada; Fresa gasta 30 g)
 // maximo: cuántas veces se puede pedir en un mismo producto (Huevo extra hasta 3); 1 = se marca o no
@@ -48,6 +48,27 @@ function Ayuda() {
     );
 }
 
+// Botón «?» de un ajuste; su explicación sale debajo de la fila (otra vez «?» la cierra)
+function BotonAyuda({ clave, lugar, abierta, onAbrir }: { clave: ClaveAyuda; lugar: string; abierta: string | null; onAbrir: (v: string | null) => void }) {
+    const id = `${lugar}:${clave}`;
+    return (
+        <button type="button" onClick={e => { e.preventDefault(); onAbrir(abierta === id ? null : id); }} title={`¿Qué es «${AYUDAS[clave].titulo}»?`}
+            aria-label={`Ayuda: ${AYUDAS[clave].titulo}`} aria-expanded={abierta === id}
+            className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${abierta === id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-600'}`}>?</button>
+    );
+}
+
+function CajaAyuda({ lugar, abierta }: { lugar: string; abierta: string | null }) {
+    if (!abierta?.startsWith(`${lugar}:`)) return null;
+    const a = AYUDAS[abierta.slice(lugar.length + 1) as ClaveAyuda];
+    return (
+        <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-900">
+            <p><b>{a.titulo}:</b> {a.texto}</p>
+            <p className="mt-1 text-blue-800">Ej.: {a.ejemplo}</p>
+        </div>
+    );
+}
+
 interface Props {
     producto: { id: number | null; nombre: string };  // id null: producto nuevo, todavía sin guardar
     conjunto: ConjuntoConfigInterface | null;          // sus modificadores actuales (null: aún no tiene)
@@ -63,6 +84,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
     const [form, setForm] = useState(() => ({ bloques: aBloques(conjunto) }));
     const [guardando, setGuardando] = useState(false);
     const [verAyuda, setVerAyuda] = useState(false);
+    const [ayuda, setAyuda] = useState<string | null>(null);
 
     const cambiarBloque = (n: number, c: Partial<BloqueForm>) => setForm(f => ({ ...f, bloques: f.bloques.map((b, i) => i === n ? { ...b, ...c } : b) }));
     // Arrastrar y soltar: se agarra el bloque por la manija ⠿ y se suelta donde va
@@ -163,6 +185,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                             </button>
                                         ))}
                                     </div>
+                                    <BotonAyuda clave="requerido" lugar={`b${n}`} abierta={ayuda} onAbrir={setAyuda} />
                                     <button type="button" onClick={() => moverBloque(n, -1)} disabled={n === 0} aria-label="Subir bloque"
                                         className="h-9 w-9 rounded-md text-gray-500 hover:bg-gray-200 disabled:opacity-30">↑</button>
                                     <button type="button" onClick={() => moverBloque(n, 1)} disabled={n === form.bloques.length - 1} aria-label="Bajar bloque"
@@ -172,6 +195,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                 </div>
 
                                 <div className="space-y-3 p-4">
+                                    <CajaAyuda lugar={`b${n}`} abierta={ayuda} />
                                     <div className="flex flex-wrap items-end gap-3">
                                         <label className="text-xs text-gray-600">Mínimo
                                             <input className={`${inputClass} !w-24`} type="number" inputMode="numeric" min={0} max={50} value={b.minimo} placeholder="0"
@@ -181,6 +205,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                             <input className={`${inputClass} !w-24`} type="number" inputMode="numeric" min={1} max={50} value={b.maximo} placeholder="Sin tope"
                                                 onChange={e => cambiarBloque(n, { maximo: e.target.value })} />
                                         </label>
+                                        <span className="pb-2.5"><BotonAyuda clave="minmax" lugar={`b${n}`} abierta={ayuda} onAbrir={setAyuda} /></span>
                                         <p className={`pb-2 text-xs ${max !== null && min > max ? 'font-medium text-red-600' : 'text-gray-500'}`}>
                                             {max !== null && min > max ? 'El mínimo no puede ser mayor que el máximo.'
                                                 : `Al vender: «${b.nombre.trim() || 'Bloque'}» · ${requerido ? 'Requerido' : 'Opcional'}${reglaTexto({ minimo: min, maximo: max }) ? ` · ${reglaTexto({ minimo: min, maximo: max })}` : ''}${max === 1 ? ' (tocar otra la cambia)' : ''}`}
@@ -196,11 +221,13 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                                     <input className={inputClass} value={o.nombre} maxLength={80} placeholder="Opción (Leche entera)"
                                                         onChange={e => cambiar({ nombre: e.target.value })} />
                                                     <MoneyInput prefix="+$" className="!w-32 shrink-0" value={o.precio} onChange={v => cambiar({ precio: v })} />
+                                                    <span className="self-center"><BotonAyuda clave="precio" lugar={`b${n}o${k}`} abierta={ayuda} onAbrir={setAyuda} /></span>
                                                     <label className="flex shrink-0 items-center gap-1 text-xs text-gray-500" title="Cuántas veces se puede pedir esta opción en un mismo producto (ej. Huevo extra: hasta 3). 1 = se marca o no.">
                                                         Máx.
                                                         <input type="number" min={1} max={20} className={`${inputClass} !w-16`} value={o.maximo}
                                                             onChange={e => cambiar({ maximo: e.target.value })} aria-label="Máximo de esta opción" />
                                                     </label>
+                                                    <span className="self-center"><BotonAyuda clave="maximo" lugar={`b${n}o${k}`} abierta={ayuda} onAbrir={setAyuda} /></span>
                                                     <button type="button" onClick={() => cambiarBloque(n, { opciones: b.opciones.filter((_, i) => i !== k) })}
                                                         className="h-[42px] w-10 shrink-0 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Quitar opción">✕</button>
                                                 </div>
@@ -214,6 +241,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                                                 cambiar({ producto_id: elegido ? String(elegido.id) : '', unidad_medida_id: elegido?.unidad_medida_id ? String(elegido.unidad_medida_id) : '' });
                                                             }} />
                                                     </div>
+                                                    <span className="self-center"><BotonAyuda clave="insumo" lugar={`b${n}o${k}`} abierta={ayuda} onAbrir={setAyuda} /></span>
                                                     {o.producto_id && (
                                                         <>
                                                             <input type="number" min="0" step="any" inputMode="decimal" className={`${inputClass} !w-28 shrink-0`} placeholder="Cantidad"
@@ -228,13 +256,16 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                                     )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-4 px-1 text-sm text-gray-700">
-                                                    <label className="flex items-center gap-2" title="Siempre va marcada y no se puede quitar">
-                                                        <input type="checkbox" className="h-4 w-4" checked={o.obligatorio} onChange={e => cambiar({ obligatorio: e.target.checked })} /> Obligatorio</label>
-                                                    <label className="flex items-center gap-2" title="Al elegirla se quitan todas las demás opciones del bloque">
-                                                        <input type="checkbox" className="h-4 w-4" checked={o.exclusiva} onChange={e => cambiar({ exclusiva: e.target.checked })} /> Una sola</label>
-                                                    <label className="flex items-center gap-2" title="Apagada no sale al vender">
-                                                        <input type="checkbox" className="h-4 w-4" checked={o.activo} onChange={e => cambiar({ activo: e.target.checked })} /> Activa</label>
+                                                    {([['obligatorio', 'obligatorio', 'Obligatorio'], ['exclusiva', 'unaSola', 'Una sola'], ['activo', 'activa', 'Activa']] as const).map(([campo, clave, texto]) => (
+                                                        <span key={campo} className="flex items-center gap-1.5">
+                                                            <label className="flex items-center gap-2">
+                                                                <input type="checkbox" className="h-4 w-4" checked={o[campo]} onChange={e => cambiar({ [campo]: e.target.checked })} /> {texto}
+                                                            </label>
+                                                            <BotonAyuda clave={clave} lugar={`b${n}o${k}`} abierta={ayuda} onAbrir={setAyuda} />
+                                                        </span>
+                                                    ))}
                                                 </div>
+                                                <CajaAyuda lugar={`b${n}o${k}`} abierta={ayuda} />
                                             </div>
                                         );
                                     })}
