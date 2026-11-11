@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LoadingModal from "../../components/Loading/LoadingModal";
 import PageHeader from "../../components/common/PageHeader";
 import ProductoFormulario from "../../components/productos/ProductoFormulario";
+import ProductoModificadores from "../../components/productos/ProductoModificadores";
 import { useAuth } from "../../context/AuthContext";
 import { useProductoEditarHook } from "../../hooks/productos/useProductoEditarHook";
 
@@ -57,6 +58,13 @@ export default function ProductoEditar() {
                         </label>
                     }
                 />
+
+                {/* Bloques de modificadores (Tipo de leche, Salsa...): se guardan al momento, aparte del producto */}
+                {productoId && hasPermission("mesas.configurar") && (
+                    <div className="mt-6">
+                        <ProductoModificadores productoId={Number(productoId)} />
+                    </div>
+                )}
 
                 {/* Botones */}
                 <div className="mt-6 flex items-center justify-end gap-3">

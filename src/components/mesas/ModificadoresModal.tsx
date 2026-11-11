@@ -44,7 +44,9 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
     const [cantidad, setCantidad] = useState(inicial?.cantidad ?? 1);
     const [notas, setNotas] = useState(inicial?.notas ?? "");
 
-    const suyos = grupos.filter((g) => producto.grupos.includes(g.id));
+    // En el orden en que se acomodaron en el producto (Tipo de leche antes que Leche extra)
+    const suyos = grupos.filter((g) => producto.grupos.includes(g.id))
+        .sort((a, b) => producto.grupos.indexOf(a.id) - producto.grupos.indexOf(b.id));
     const veces = (g: GrupoModificadorInterface, id: number) => (elegidos[g.id] ?? []).filter((x) => x === id).length;
     const extra = suyos.reduce((s, g) => s + g.opciones.reduce((t, o) => t + o.precio * veces(g, o.id), 0), 0);
     const unitario = producto.precio + extra;

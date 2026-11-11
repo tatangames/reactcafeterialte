@@ -145,4 +145,11 @@ export const guardarGrupo = async (datos: {
     opciones: { id?: number; nombre: string; precio: number; maximo: number; obligatorio: boolean; exclusiva: boolean; activo: boolean; producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null }[];
     productos: number[];
 }, id?: number) =>
-    (id ? await api.put(`/mesas/config/modificadores/${id}`, datos) : await api.post("/mesas/config/modificadores", datos)).data as { message: string };
+    (id ? await api.put(`/mesas/config/modificadores/${id}`, datos) : await api.post("/mesas/config/modificadores", datos)).data as { id: number; message: string };
+
+// Bloques de un producto (grupos de modificadores) en el orden en que salen al vender
+export const getBloquesProducto = async (productoId: number) =>
+    (await api.get(`/mesas/config/productos/${productoId}/modificadores`)).data as { grupos: number[] };
+
+export const guardarBloquesProducto = async (productoId: number, grupos: number[]) =>
+    (await api.put(`/mesas/config/productos/${productoId}/modificadores`, { grupos })).data as { message: string };
