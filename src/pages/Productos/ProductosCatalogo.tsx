@@ -70,6 +70,19 @@ function ListaProductos() {
             wrap: true,
         },
         {
+            name: "Color",
+            width: "80px",
+            center: true,
+            sortable: true,
+            selector: (row: ProductoInterface) => row.color_pos ?? "",
+            cell: (row: ProductoInterface) =>
+                row.color_pos ? (
+                    <span className="inline-block h-5 w-5 rounded-full border border-black/10" style={{ backgroundColor: row.color_pos }} title={row.color_pos} />
+                ) : (
+                    <span className="inline-block h-5 w-5 rounded-full border-2 border-dashed border-gray-300" title="Sin color" />
+                ),
+        },
+        {
             name: "Clase",
             width: "150px",
             sortable: true,

@@ -69,6 +69,7 @@ export interface ProductoInterface {
     unidad_medida: string | null;
     unidad_abrev: string | null;
     categorias: string[];
+    color_pos?: string | null; // color del botón en la venta (#RRGGBB) o sin color
     usado?: boolean;        // ya se vendió, compró, produjo... o es parte de una receta: no se puede borrar
 }
 
