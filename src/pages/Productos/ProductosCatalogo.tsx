@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../components/Loading/LoadingModal";
@@ -8,40 +8,12 @@ import { ProductoInterface } from "../../types/interfaces";
 import { STORAGE_URL } from "../../services/api";
 import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
 import { CanAccess } from "../../components/auth/CanAccess";
-import ModificadoresPanel from "../../components/productos/ModificadoresPanel";
-import { useAuth } from "../../context/AuthContext";
 
-type Pestana = "productos" | "modificadores";
-
-// Catálogo con dos pestañas: los productos y sus modificadores (extras: leche, salsa, huevo extra)
+// Catálogo de productos. Los modificadores de cada producto se arman dentro del producto (crear o editar)
 export default function ProductosCatalogo() {
-    const { hasPermission } = useAuth();
-    const verProductos = hasPermission("productos.ver") || hasPermission("productos.gestionar");
-    const verModificadores = hasPermission("mesas.configurar");
-    const [params, setParams] = useSearchParams();
-    // La pestaña queda en la dirección (?tab=modificadores) para volver a ella al recargar
-    const pestana: Pestana = (params.get("tab") === "modificadores" && verModificadores) || !verProductos ? "modificadores" : "productos";
-    const cambiarPestana = (p: Pestana) => setParams(p === "productos" ? {} : { tab: p }, { replace: true });
-
     return (
         <div className="p-6">
-            {verProductos && verModificadores && (
-                <div className="mb-5 flex flex-wrap gap-2 border-b border-gray-200">
-                    {([["productos", "Productos"], ["modificadores", "Modificadores"]] as const).map(([clave, texto]) => (
-                        <button key={clave} type="button" onClick={() => cambiarPestana(clave)}
-                            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium ${pestana === clave ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}>{texto}</button>
-                    ))}
-                </div>
-            )}
-            {pestana === "modificadores" ? (
-                <>
-                    <div className="mb-4">
-                        <h1 className="text-2xl font-semibold text-gray-800">Modificadores</h1>
-                        <p className="text-sm text-gray-500">Extras que se eligen al vender un producto: leche, salsa, cómo van los huevos, huevo extra</p>
-                    </div>
-                    <ModificadoresPanel />
-                </>
-            ) : <ListaProductos />}
+            <ListaProductos />
         </div>
     );
 }

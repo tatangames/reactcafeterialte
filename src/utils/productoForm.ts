@@ -115,3 +115,10 @@ export const margen = (costo: string, precio: string): { monto: number; porcenta
 
 // Colores sugeridos para los botones del POS
 export const COLORES_POS = ["#F59E0B", "#EF4444", "#EC4899", "#8B5CF6", "#3B82F6", "#10B981", "#84CC16", "#78350F"];
+
+/**
+ * Lleva modificadores lo que se vende y se prepara o entrega (Chocolate, Brownie): no los insumos
+ * (Leche, Helado) ni los empaques, que solo se descuentan.
+ */
+export const llevaModificadores = (f: Pick<ProductoFormInterface, "clase" | "se_vende" | "consumo_interno">) =>
+    (f.se_vende || f.consumo_interno) && f.clase !== "materia_prima" && f.clase !== "empaque";

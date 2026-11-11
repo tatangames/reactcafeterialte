@@ -1,6 +1,9 @@
 import LoadingModal from "../../components/Loading/LoadingModal";
 import PageHeader from "../../components/common/PageHeader";
 import ProductoFormulario from "../../components/productos/ProductoFormulario";
+import ProductoModificadores from "../../components/productos/ProductoModificadores";
+import { useAuth } from "../../context/AuthContext";
+import { llevaModificadores } from "../../utils/productoForm";
 import { useProductoRegistroHook } from "../../hooks/productos/useProductoRegistroHook";
 
 export default function ProductoRegistro() {
@@ -16,7 +19,10 @@ export default function ProductoRegistro() {
         toggleCategoria,
         handleSubmit,
         resetForm,
+        modificadores,
+        setModificadores,
     } = useProductoRegistroHook();
+    const { hasPermission } = useAuth();
 
     return (
         <>
@@ -36,6 +42,13 @@ export default function ProductoRegistro() {
                     onToggleCategoria={toggleCategoria}
                     puedeEditarPrecios
                 />
+
+                {/* Bloques de modificadores (Tipo de leche, Azúcar...): se guardan junto con el producto */}
+                {hasPermission("mesas.configurar") && llevaModificadores(form) && (
+                    <div className="mt-6">
+                        <ProductoModificadores productoId={null} nombre={form.nombre} pendientes={modificadores} onPendientes={setModificadores} />
+                    </div>
+                )}
 
                 {/* Botones */}
                 <div className="mt-6 flex items-center justify-end gap-3">

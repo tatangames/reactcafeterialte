@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 
-import FormField, { inputClass } from '../form/FormField';
+import { inputClass } from '../form/FormField';
 import MoneyInput from '../form/MoneyInput';
 import SelectBuscador from '../form/SelectBuscador';
 import {
-    ConjuntoConfigInterface, guardarModificadoresProducto, InsumoModificadorInterface, UnidadModificadorInterface,
+    BloqueGuardar, ConjuntoConfigInterface, guardarModificadoresProducto, InsumoModificadorInterface, UnidadModificadorInterface,
 } from '../../services/mesas';
 import { mensajeError } from '../../utils/formato';
 import { minimoDe, reglaTexto } from '../../utils/modificadores';
@@ -26,10 +26,10 @@ const bloqueVacio = (): BloqueForm => ({ clave: `n${++siguiente}`, nombre: '', m
 // copia: los bloques de otro producto sin sus ids, así se guardan como propios
 const aBloques = (c: ConjuntoConfigInterface | null, copia = false): BloqueForm[] =>
     c ? c.bloques.map((g): BloqueForm => ({
-        clave: `n${++siguiente}`, id: copia ? undefined : g.id, nombre: g.nombre,
+        clave: `n${++siguiente}`, id: copia || g.id < 0 ? undefined : g.id, nombre: g.nombre,
         minimo: minimoDe(g) ? String(minimoDe(g)) : '', maximo: g.maximo ? String(g.maximo) : '',
         opciones: g.opciones.filter(o => !copia || o.activo).map(o => ({
-            id: copia ? undefined : o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
+            id: copia || o.id < 0 ? undefined : o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
             obligatorio: !!o.obligatorio, exclusiva: !!o.exclusiva, activo: o.activo,
             producto_id: o.producto_id ? String(o.producto_id) : '', cantidad: o.cantidad ? String(o.cantidad) : '',
             unidad_medida_id: o.unidad_medida_id ? String(o.unidad_medida_id) : '',
@@ -40,7 +40,7 @@ const aBloques = (c: ConjuntoConfigInterface | null, copia = false): BloqueForm[
 function Ayuda() {
     return (
         <div className="space-y-2 rounded-lg bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
-            <p>Los modificadores de cada producto van en <b>bloques</b>, como en las apps de delivery. Ej.: el Chocolate con <b>1. Tipo de leche</b> (requerido, elige 1), <b>2. Azúcar</b> (opcional, máximo 1) y <b>3. Extras</b> (opcional). Son <b>solo de este producto</b>: cambiarlos no toca a ningún otro. Para no escribirlos de nuevo, usa «Copiar de otro producto» y ajusta lo que cambie.</p>
+            <p>Los modificadores de cada producto van en <b>bloques</b>, como en las apps de delivery. Ej.: el Chocolate con <b>1. Tipo de leche</b> (requerido, elige 1), <b>2. Azúcar</b> (opcional, máximo 1) y <b>3. Extras</b> (opcional). Son <b>solo de este producto</b>: cambiarlos no toca a ningún otro.</p>
             <p><b>Requerido:</b> no deja agregar el producto hasta elegir el mínimo. <b>Opcional:</b> se puede dejar sin elegir. Mínimo y máximo cuentan las opciones del bloque en total, contando cada vez que se repite una. Con máximo 1, tocar otra opción la cambia.</p>
             <p><b>Precio extra:</b> se suma al producto (Deslactosada +$0.25). En blanco: gratis. <b>Insumo:</b> lo que se descuenta del inventario al venderse con esa opción (Leche entera 250 ml).</p>
             <p>Casillas de cada opción: <b>Obligatorio</b> siempre va marcada; <b>Una sola</b> al elegirla quita todas las demás del bloque; <b>Activa</b> apagada no sale al vender.</p>
@@ -49,32 +49,35 @@ function Ayuda() {
 }
 
 interface Props {
-    producto: { id: number; nombre: string } | null;   // null: se elige aquí (uno que aún no tenga modificadores)
+    producto: { id: number | null; nombre: string };  // id null: producto nuevo, todavía sin guardar
     conjunto: ConjuntoConfigInterface | null;          // sus modificadores actuales (null: aún no tiene)
-    conjuntos: ConjuntoConfigInterface[];              // los de otros productos, para copiarlos
-    productos: { id: number; nombre: string; conjunto_id: number | null }[];
     insumos: InsumoModificadorInterface[];
     unidades: UnidadModificadorInterface[];
     onCerrar: () => void;
-    onGuardado: (productoId: number) => void;
+    // Producto ya guardado: los guarda y avisa. Producto nuevo: los devuelve y se guardan junto con él
+    onGuardado: (bloques: BloqueGuardar[]) => void;
 }
 
 /** Ventana para crear o editar los modificadores de un producto, en bloques, como en las apps de delivery. */
-export default function EditorConjuntoModificadores({ producto, conjunto, conjuntos, productos, insumos, unidades, onCerrar, onGuardado }: Props) {
-    const [productoId, setProductoId] = useState<number | null>(producto?.id ?? null);
+export default function EditorConjuntoModificadores({ producto, conjunto, insumos, unidades, onCerrar, onGuardado }: Props) {
     const [form, setForm] = useState(() => ({ bloques: aBloques(conjunto) }));
     const [guardando, setGuardando] = useState(false);
     const [verAyuda, setVerAyuda] = useState(false);
-    const otros = conjuntos.filter(c => c.producto_id !== productoId);
-    const nombreProducto = producto?.nombre ?? productos.find(p => p.id === productoId)?.nombre;
-
-    const copiarDe = (c: ConjuntoConfigInterface) => {
-        const conBloques = form.bloques.some(b => b.nombre.trim() || b.opciones.some(o => o.nombre.trim()));
-        if (conBloques && !window.confirm(`¿Reemplazar los bloques por los de «${c.producto}»? Después puedes cambiarlos: son solo de este producto.`)) return;
-        setForm({ bloques: aBloques(c, true) });
-    };
 
     const cambiarBloque = (n: number, c: Partial<BloqueForm>) => setForm(f => ({ ...f, bloques: f.bloques.map((b, i) => i === n ? { ...b, ...c } : b) }));
+    // Arrastrar y soltar: se agarra el bloque por la manija ⠿ y se suelta donde va
+    const [agarrado, setAgarrado] = useState<number | null>(null);
+    const [arrastrando, setArrastrando] = useState<number | null>(null);
+    const [sobre, setSobre] = useState<number | null>(null);
+    const llevarBloque = (desde: number, hasta: number) => setForm(f => {
+        if (desde === hasta) return f;
+        const bloques = [...f.bloques];
+        const [movido] = bloques.splice(desde, 1);
+        bloques.splice(hasta, 0, movido);
+        return { ...f, bloques };
+    });
+    const soltar = () => { setArrastrando(null); setSobre(null); setAgarrado(null); };
+
     const moverBloque = (n: number, d: -1 | 1) => setForm(f => {
         const bloques = [...f.bloques];
         [bloques[n], bloques[n + d]] = [bloques[n + d], bloques[n]];
@@ -84,30 +87,32 @@ export default function EditorConjuntoModificadores({ producto, conjunto, conjun
         const min = Number(b.minimo) || 0;
         return b.maximo.trim() !== '' && min > Number(b.maximo);
     });
-    const error = !productoId ? 'Elige el producto'
-        : form.bloques.length === 0 ? 'Agrega al menos un bloque'
+    const error = form.bloques.length === 0 ? 'Agrega al menos un bloque'
             : form.bloques.some(b => !b.nombre.trim()) ? 'Cada bloque necesita un nombre'
                 : form.bloques.some(b => !b.opciones.some(o => o.nombre.trim())) ? 'Cada bloque necesita al menos una opción'
                     : errorBloques ? `«${errorBloques.nombre}»: el mínimo no puede ser mayor que el máximo` : null;
 
+    const aGuardar = (): BloqueGuardar[] => form.bloques.map(b => ({
+        id: b.id, nombre: b.nombre.trim(),
+        minimo: Math.max(0, Math.floor(Number(b.minimo) || 0)),
+        maximo: b.maximo.trim() ? Math.max(1, Math.floor(Number(b.maximo) || 1)) : null,
+        opciones: b.opciones.filter(o => o.nombre.trim()).map(o => ({
+            id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0),
+            obligatorio: o.obligatorio, exclusiva: o.exclusiva, activo: o.activo,
+            maximo: Math.min(20, Math.max(1, Math.floor(Number(o.maximo) || 1))),
+            producto_id: o.producto_id ? Number(o.producto_id) : null,
+            cantidad: o.producto_id ? Number(o.cantidad || 0) : null,
+            unidad_medida_id: o.producto_id && o.unidad_medida_id ? Number(o.unidad_medida_id) : null,
+        })),
+    }));
+
     const guardar = async () => {
+        const bloques = aGuardar();
+        if (!producto.id) return onGuardado(bloques);
         setGuardando(true);
         try {
-            const r = await guardarModificadoresProducto(productoId!, form.bloques.map(b => ({
-                    id: b.id, nombre: b.nombre.trim(),
-                    minimo: Math.max(0, Math.floor(Number(b.minimo) || 0)),
-                    maximo: b.maximo.trim() ? Math.max(1, Math.floor(Number(b.maximo) || 1)) : null,
-                    opciones: b.opciones.filter(o => o.nombre.trim()).map(o => ({
-                        id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0),
-                        obligatorio: o.obligatorio, exclusiva: o.exclusiva, activo: o.activo,
-                        maximo: Math.min(20, Math.max(1, Math.floor(Number(o.maximo) || 1))),
-                        producto_id: o.producto_id ? Number(o.producto_id) : null,
-                        cantidad: o.producto_id ? Number(o.cantidad || 0) : null,
-                        unidad_medida_id: o.producto_id && o.unidad_medida_id ? Number(o.unidad_medida_id) : null,
-                    })),
-                })));
-            toast.success(r.message);
-            onGuardado(productoId!);
+            toast.success((await guardarModificadoresProducto(producto.id, bloques)).message);
+            onGuardado(bloques);
         } catch (e) {
             toast.error(mensajeError(e, 'No se pudo guardar'));
         } finally {
@@ -119,7 +124,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, conjun
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
             <div className="max-h-[94vh] w-full max-w-3xl space-y-4 overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
                 <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-semibold">{nombreProducto ? `Modificadores de ${nombreProducto}` : 'Agregar modificadores a un producto'}</h2>
+                    <h2 className="text-lg font-semibold">Modificadores de {producto.nombre.trim() || 'producto nuevo'}</h2>
                     <button type="button" onClick={() => setVerAyuda(v => !v)} aria-expanded={verAyuda}
                         className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${verAyuda ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600'}`}>
                         <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-bold">?</span>
@@ -128,29 +133,24 @@ export default function EditorConjuntoModificadores({ producto, conjunto, conjun
                 </div>
                 {verAyuda && <Ayuda />}
 
-                {!producto && (
-                    <FormField label="Producto" required hint="Solo salen los que aún no tienen modificadores.">
-                        <SelectBuscador value={productoId} placeholder="Buscar producto..."
-                            opciones={productos.filter(p => !p.conjunto_id).map(p => ({ value: p.id, label: p.nombre }))}
-                            onChange={v => setProductoId(v)} />
-                    </FormField>
-                )}
-                {otros.length > 0 && (
-                    <FormField label="Copiar de otro producto" hint="Trae sus bloques y opciones; después cámbialos sin tocar al otro producto.">
-                        <SelectBuscador value={null} placeholder="Buscar producto que ya tiene modificadores..."
-                            opciones={otros.map(c => ({ value: c.id, label: `${c.producto} · ${c.bloques.map(b => b.nombre).join(', ')}` }))}
-                            onChange={v => { const c = otros.find(x => x.id === v); if (c) copiarDe(c); }} />
-                    </FormField>
-                )}
-
                 <div className="space-y-4">
                     {form.bloques.map((b, n) => {
                         const min = Number(b.minimo) || 0;
                         const max = b.maximo.trim() ? Number(b.maximo) : null;
                         const requerido = min > 0;
                         return (
-                            <div key={b.clave} className="rounded-xl border-2 border-gray-200">
+                            <div key={b.clave}
+                                draggable={agarrado === n}
+                                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(n); }}
+                                onDragOver={e => { if (arrastrando === null) return; e.preventDefault(); setSobre(n); }}
+                                onDrop={e => { e.preventDefault(); if (arrastrando !== null) llevarBloque(arrastrando, n); soltar(); }}
+                                onDragEnd={soltar}
+                                className={`rounded-xl border-2 transition ${arrastrando === n ? 'border-blue-400 opacity-50'
+                                    : sobre === n && arrastrando !== null ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200'}`}>
                                 <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2.5">
+                                    <span onMouseDown={() => setAgarrado(n)} onMouseUp={() => setAgarrado(null)}
+                                        title="Arrastra para cambiar el orden" aria-label="Arrastrar bloque"
+                                        className="cursor-grab select-none px-1 text-xl leading-none text-gray-400 hover:text-gray-700 active:cursor-grabbing">⠿</span>
                                     <span className="text-base font-bold text-gray-500">{n + 1}.</span>
                                     <input className={`${inputClass} min-w-[180px] flex-1 !h-10 font-semibold`} value={b.nombre} maxLength={80}
                                         placeholder="Nombre del bloque (Elige tu tipo de leche)" onChange={e => cambiarBloque(n, { nombre: e.target.value })} />
@@ -248,6 +248,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, conjun
                         className="w-full rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-semibold text-blue-600 hover:border-blue-400 hover:bg-blue-50">
                         + Agregar bloque
                     </button>
+                    {form.bloques.length > 1 && <p className="text-center text-xs text-gray-500">Arrastra un bloque por ⠿ (o usa ↑ ↓) para cambiar el orden: así se ven al vender.</p>}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
@@ -255,7 +256,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, conjun
                     <button type="button" onClick={onCerrar} disabled={guardando} className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm hover:bg-gray-200">Cancelar</button>
                     <button type="button" onClick={guardar} disabled={guardando || !!error}
                         className="rounded-lg bg-green-600 px-4 py-2.5 text-sm text-white hover:bg-green-700 disabled:opacity-50">
-                        {guardando ? 'Guardando...' : 'Guardar'}
+                        {guardando ? 'Guardando...' : producto.id ? 'Guardar' : 'Listo'}
                     </button>
                 </div>
             </div>

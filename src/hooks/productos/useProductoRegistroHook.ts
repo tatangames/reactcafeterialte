@@ -7,13 +7,14 @@ import {
     getUnidadMedidaTable,
     getCategoriasTable,
 } from "../../services/api";
+import { BloqueGuardar, guardarModificadoresProducto } from "../../services/mesas";
 import { getToken } from "../../utils/auth";
 import {
     UnidadMedidaInterface,
     CategoriasInterface,
     ProductoFormInterface,
 } from "../../types/interfaces";
-import { productoFormData, productoFormInicial, validarProducto } from "../../utils/productoForm";
+import { llevaModificadores, productoFormData, productoFormInicial, validarProducto } from "../../utils/productoForm";
 import { mensajeError } from "../../utils/formato";
 
 export function useProductoRegistroHook() {
@@ -23,6 +24,8 @@ export function useProductoRegistroHook() {
     const [unidades, setUnidades] = useState<UnidadMedidaInterface[]>([]);
     const [categorias, setCategorias] = useState<CategoriasInterface[]>([]);
     const [previewImagen, setPreviewImagen] = useState<string | null>(null);
+    // Bloques de modificadores armados antes de guardar: se guardan en cuanto el producto existe
+    const [modificadores, setModificadores] = useState<BloqueGuardar[] | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -88,8 +91,18 @@ export function useProductoRegistroHook() {
         setIsSaving(true);
         try {
             const response = await registrarProducto(getToken()!, productoFormData(form));
-
             toast.success(response.message || "Producto registrado correctamente");
+
+            if (modificadores?.length && llevaModificadores(form) && response.id) {
+                try {
+                    await guardarModificadoresProducto(response.id, modificadores);
+                } catch (e) {
+                    // El producto ya existe: se abre para corregir sus modificadores
+                    toast.error(mensajeError(e, "El producto se guardó, pero sus modificadores no"));
+                    navigate(`/admin/productos/editar/${response.id}`);
+                    return;
+                }
+            }
             navigate("/admin/productos/index");
         } catch (error) {
             toast.error(mensajeError(error, "Error al registrar producto"));
@@ -101,6 +114,7 @@ export function useProductoRegistroHook() {
     const resetForm = () => {
         setForm((prev) => ({ ...productoFormInicial, unidad_medida_id: prev.unidad_medida_id }));
         setPreviewImagen(null);
+        setModificadores(null);
     };
 
     return {
@@ -115,5 +129,7 @@ export function useProductoRegistroHook() {
         toggleCategoria,
         handleSubmit,
         resetForm,
+        modificadores,
+        setModificadores,
     };
 }

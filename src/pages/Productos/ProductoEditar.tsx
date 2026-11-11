@@ -6,6 +6,7 @@ import ProductoFormulario from "../../components/productos/ProductoFormulario";
 import ProductoModificadores from "../../components/productos/ProductoModificadores";
 import { useAuth } from "../../context/AuthContext";
 import { useProductoEditarHook } from "../../hooks/productos/useProductoEditarHook";
+import { llevaModificadores } from "../../utils/productoForm";
 
 export default function ProductoEditar() {
     const navigate = useNavigate();
@@ -60,7 +61,7 @@ export default function ProductoEditar() {
                 />
 
                 {/* Bloques de modificadores (Tipo de leche, Salsa...): se guardan al momento, aparte del producto */}
-                {productoId && hasPermission("mesas.configurar") && (
+                {productoId && hasPermission("mesas.configurar") && llevaModificadores(form) && (
                     <div className="mt-6">
                         <ProductoModificadores productoId={Number(productoId)} nombre={form.nombre} />
                     </div>
