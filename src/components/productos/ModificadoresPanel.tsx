@@ -10,6 +10,7 @@ import {
 } from '../../services/mesas';
 import { dinero, mensajeError } from '../../utils/formato';
 import { sinTildes } from '../../utils/texto';
+import { minimoDe, reglaTexto } from '../../utils/modificadores';
 
 function Ventana({ titulo, children, onCerrar, onGuardar, guardando, ancho = 'max-w-md' }: {
     titulo: string; children: React.ReactNode; onCerrar: () => void; onGuardar: () => void; guardando: boolean; ancho?: string;
@@ -56,7 +57,7 @@ function AyudaModificadores() {
             <Bloque titulo="Casillas de cada opción">
                 <p><b>Obligatorio:</b> la opción siempre va marcada y no se puede quitar (si tiene máximo, se puede subir). Ej.: «Tortillas» del desayuno.</p>
                 <p><b>Una sola:</b> al elegirla se quitan las demás opciones del grupo, y al elegir otra se quita ella. Ej.: «Sin azúcar» quita «Azúcar extra». Si todas son «una sola», solo se elige una (Estrellados, Revueltos o Picados).</p>
-                <p><b>Elegir al menos una</b> (del grupo): no deja agregar el producto sin marcar alguna opción. Ej.: «Huevos» del desayuno.</p>
+                <p><b>Mínimo y máximo</b> (del grupo): cuántas opciones se eligen en total, contando cada vez que se repite una. Ej.: «Huevos» mínimo 1; «Tipo de leche» mínimo 1, máximo 2. Con mínimo no deja agregar el producto hasta completarlo; con máximo no deja pasarse.</p>
                 <p><b>Activa:</b> apagada no sale al vender, pero se conserva (ej. un sabor que se acabó por temporada).</p>
             </Bloque>
             <Bloque titulo="Precio extra (+$)">
@@ -86,7 +87,7 @@ export default function ModificadoresPanel() {
     const [unidades, setUnidades] = useState<UnidadModificadorInterface[]>([]);
     const [verAyudaGrupo, setVerAyudaGrupo] = useState(false);
     const [grupo, setGrupo] = useState<{
-        id?: number; nombre: string; obligatorio: boolean; opciones: OpcionForm[]; productos: number[];
+        id?: number; nombre: string; minimo: string; maximo: string; opciones: OpcionForm[]; productos: number[];
     } | null>(null);
     const [buscarProducto, setBuscarProducto] = useState('');
 
@@ -123,7 +124,7 @@ export default function ModificadoresPanel() {
                         {(
                 <>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                        <button type="button" onClick={() => setGrupo({ nombre: '', obligatorio: false, opciones: [opcionVacia()], productos: [] })}
+                        <button type="button" onClick={() => setGrupo({ nombre: '', minimo: '', maximo: '', opciones: [opcionVacia()], productos: [] })}
                             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">+ Nuevo grupo</button>
                         <input type="text" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar grupo, opción o producto..."
                             className="h-[42px] w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 sm:w-[300px]" />
@@ -134,7 +135,8 @@ export default function ModificadoresPanel() {
                         {cargado && grupos.length > 0 && visibles.length === 0 && <p className="text-sm text-gray-500">Ningún grupo coincide con «{buscar.trim()}».</p>}
                         {visibles.map(g => (
                             <button key={g.id} type="button" onClick={() => setGrupo({
-                                id: g.id, nombre: g.nombre, obligatorio: g.obligatorio,
+                                id: g.id, nombre: g.nombre,
+                                minimo: minimoDe(g) ? String(minimoDe(g)) : '', maximo: g.maximo ? String(g.maximo) : '',
                                 opciones: g.opciones.map(o => ({
                                     id: o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
                                     obligatorio: !!o.obligatorio, exclusiva: !!o.exclusiva, activo: o.activo,
@@ -144,7 +146,7 @@ export default function ModificadoresPanel() {
                                 productos: g.productos.map(p => p.id),
                             })} className="rounded-xl border border-gray-200 bg-white p-4 text-left hover:shadow-sm">
                                 <p className="font-semibold">{g.nombre}</p>
-                                {g.obligatorio && <p className="text-xs font-medium text-amber-700">Hay que elegir al menos una</p>}
+                                {reglaTexto(g) && <p className="text-xs font-medium text-amber-700">{reglaTexto(g).replace(/^./, c => c.toUpperCase())}</p>}
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                     {g.opciones.map(o => (
                                         <span key={o.id} className={`rounded-full px-2.5 py-1 text-xs ${o.activo ? 'bg-gray-100 text-gray-700' : 'bg-gray-50 text-gray-400 line-through'}`}>
@@ -168,7 +170,12 @@ export default function ModificadoresPanel() {
             {grupo && (
                 <Ventana titulo={grupo.id ? `Editar ${grupo.nombre}` : 'Nuevo grupo de modificadores'} ancho="max-w-2xl" guardando={guardando} onCerrar={() => setGrupo(null)}
                     onGuardar={() => guardar(() => guardarGrupo({
-                        nombre: grupo.nombre.trim(), obligatorio: grupo.obligatorio,
+                        nombre: grupo.nombre.trim(),
+                        ...(() => {
+                            const minimo = Math.max(0, Math.floor(Number(grupo.minimo) || 0));
+                            const maximo = grupo.maximo.trim() ? Math.max(1, Math.floor(Number(grupo.maximo) || 1)) : null;
+                            return { minimo, maximo, obligatorio: minimo > 0 };
+                        })(),
                         opciones: grupo.opciones.filter(o => o.nombre.trim()).map(o => ({
                             id: o.id, nombre: o.nombre.trim(), precio: Number(o.precio || 0),
                             obligatorio: o.obligatorio, exclusiva: o.exclusiva, activo: o.activo,
@@ -190,10 +197,24 @@ export default function ModificadoresPanel() {
                     <FormField label="Nombre" required>
                         <input className={inputClass} value={grupo.nombre} maxLength={80} autoFocus placeholder="Leche, Saborizante, Tamaño..." onChange={e => setGrupo(g => g && { ...g, nombre: e.target.value })} />
                     </FormField>
-                    <label className="flex items-center gap-2 text-sm" title="No deja agregar el producto sin marcar alguna opción del grupo">
-                        <input type="checkbox" className="h-4 w-4" checked={grupo.obligatorio} onChange={e => setGrupo(g => g && { ...g, obligatorio: e.target.checked })} />
-                        Elegir al menos una <span className="text-xs text-gray-500">(ej. Huevos: estrellados o revueltos)</span>
-                    </label>
+                    {/* Unidades en total del grupo, contando cuántas veces se repite cada opción */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <FormField label="Mínimo a elegir" hint="En blanco o 0: es opcional. 1: hay que elegir al menos una.">
+                            <input className={inputClass} type="number" inputMode="numeric" min={0} max={50} value={grupo.minimo} placeholder="0"
+                                onChange={e => setGrupo(g => g && { ...g, minimo: e.target.value })} />
+                        </FormField>
+                        <FormField label="Máximo a elegir" hint="En blanco: sin tope. Ej.: Tipo de leche, máximo 2.">
+                            <input className={inputClass} type="number" inputMode="numeric" min={1} max={50} value={grupo.maximo} placeholder="Sin tope"
+                                onChange={e => setGrupo(g => g && { ...g, maximo: e.target.value })} />
+                        </FormField>
+                    </div>
+                    {(() => {
+                        const min = Number(grupo.minimo) || 0;
+                        const max = grupo.maximo.trim() ? Number(grupo.maximo) : null;
+                        if (max !== null && min > max) return <p className="text-xs font-medium text-red-600">El mínimo no puede ser mayor que el máximo.</p>;
+                        const texto = reglaTexto({ minimo: min, maximo: max });
+                        return texto && <p className="text-xs text-gray-500">Al vender se verá: «{grupo.nombre.trim() || 'Grupo'}: {texto}». Cuenta cada vez que se repite una opción.</p>;
+                    })()}
                     <FormField label="Opciones" required hint="Precio extra en blanco: no cambia el precio. Insumo: lo que se descuenta del inventario por cada producto vendido con esa opción.">
                         <div className="space-y-3">
                             {grupo.opciones.map((o, n) => {

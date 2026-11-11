@@ -3,6 +3,7 @@ import { useState } from "react";
 import QtyStepper from "../form/QtyStepper";
 import { dinero } from "../../utils/formato";
 import { GrupoModificadorInterface, ProductoMesaInterface } from "../../types/mesas";
+import { maximoDe, minimoDe, reglaTexto } from "../../utils/modificadores";
 
 type Opcion = GrupoModificadorInterface["opciones"][number];
 
@@ -47,15 +48,22 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
     const veces = (g: GrupoModificadorInterface, id: number) => (elegidos[g.id] ?? []).filter((x) => x === id).length;
     const extra = suyos.reduce((s, g) => s + g.opciones.reduce((t, o) => t + o.precio * veces(g, o.id), 0), 0);
     const unitario = producto.precio + extra;
-    // Grupo obligatorio: hay que elegir al menos una de sus opciones (Huevos: cómo van)
-    const faltan = suyos.filter((g) => g.obligatorio && g.opciones.length > 0 && !(elegidos[g.id]?.length));
+    // Mínimo y máximo del grupo: unidades en total, contando repeticiones («Tipo de leche: de 1 a 2»)
+    const total = (g: GrupoModificadorInterface) => (elegidos[g.id] ?? []).length;
+    const lleno = (g: GrupoModificadorInterface) => maximoDe(g) !== null && total(g) >= (maximoDe(g) ?? 0);
+    const faltan = suyos.filter((g) => g.opciones.length > 0 && total(g) < minimoDe(g));
+    // Una lista nueva para el grupo no puede pasar del máximo
+    const cabe = (g: GrupoModificadorInterface, lista: number[]) => maximoDe(g) === null || lista.length <= (maximoDe(g) ?? 0);
 
-    // Tocar marca o quita; una obligatoria no se quita
+    // Tocar marca o quita; una obligatoria no se quita. Con el grupo lleno y máximo 1, cambia por la nueva
     const alternar = (g: GrupoModificadorInterface, o: Opcion) =>
         setElegidos((e) => {
             const actuales = e[g.id] ?? [];
             if (actuales.includes(o.id)) return o.obligatorio ? e : { ...e, [g.id]: actuales.filter((x) => x !== o.id) };
-            return { ...e, [g.id]: conOpcion(g, actuales, o, 1) };
+            const nueva = conOpcion(g, actuales, o, 1);
+            if (cabe(g, nueva)) return { ...e, [g.id]: nueva };
+            if (maximoDe(g) === 1 && !g.opciones.some((x) => x.obligatorio)) return { ...e, [g.id]: [o.id] };
+            return e;
         });
 
     // Opción con máximo (Huevo extra hasta 3): + y − cambian cuántas van
@@ -66,7 +74,8 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
             const n = actuales.filter((x) => x === o.id).length;
             const nuevo = Math.min(maximo, Math.max(o.obligatorio ? 1 : 0, n + delta));
             if (nuevo === 0) return { ...e, [g.id]: actuales.filter((x) => x !== o.id) };
-            return { ...e, [g.id]: conOpcion(g, actuales, o, nuevo) };
+            const lista = conOpcion(g, actuales, o, nuevo);
+            return delta > 0 && !cabe(g, lista) ? e : { ...e, [g.id]: lista };
         });
 
     return (
@@ -81,7 +90,11 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                         <div key={g.id}>
                             <p className="mb-2 text-sm font-semibold text-gray-800">
                                 {g.nombre}
-                                {g.obligatorio && <span className="ml-2 text-xs font-normal text-amber-700">elige al menos una</span>}
+                                {reglaTexto(g) && (
+                                    <span className={`ml-2 text-xs font-normal ${total(g) < minimoDe(g) ? "text-amber-700" : "text-gray-500"}`}>
+                                        {reglaTexto(g)}{maximoDe(g) !== null ? ` · llevas ${total(g)}` : ""}
+                                    </span>
+                                )}
                             </p>
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                                 {g.opciones.map((o) => {
@@ -93,7 +106,7 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                                         const n = veces(g, o.id);
                                         return (
                                             <div key={o.id} className={`min-h-14 rounded-xl border-2 px-3 py-2 text-sm ${n > 0 ? "border-blue-600 bg-blue-50" : "border-gray-200"}`}>
-                                                <button type="button" onClick={() => n === 0 && cambiarVeces(g, o, 1, maximo)} className="block w-full text-left">
+                                                <button type="button" onClick={() => n === 0 && cambiarVeces(g, o, 1, maximo)} disabled={n === 0 && lleno(g) && !o.exclusiva} className="block w-full text-left disabled:opacity-50">
                                                     <span className={`block ${n > 0 ? "font-semibold text-blue-800" : "text-gray-700"}`}>{o.nombre}</span>
                                                     <span className="text-xs text-gray-500">{o.precio > 0 ? `+${dinero(o.precio)} c/u · ` : ""}hasta {maximo}{o.obligatorio ? " · siempre va" : ""}</span>
                                                 </button>
@@ -101,16 +114,18 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                                                     <button type="button" onClick={() => cambiarVeces(g, o, -1, maximo)} disabled={n <= (o.obligatorio ? 1 : 0)} aria-label={`Quitar ${o.nombre}`}
                                                         className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">−</button>
                                                     <span className="w-6 text-center text-base font-bold">{n}</span>
-                                                    <button type="button" onClick={() => cambiarVeces(g, o, 1, maximo)} disabled={n >= maximo} aria-label={`Agregar ${o.nombre}`}
+                                                    <button type="button" onClick={() => cambiarVeces(g, o, 1, maximo)} disabled={n >= maximo || (lleno(g) && !o.exclusiva)} aria-label={`Agregar ${o.nombre}`}
                                                         className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">+</button>
                                                 </div>
                                             </div>
                                         );
                                     }
                                     return (
-                                        <button key={o.id} type="button" onClick={() => alternar(g, o)} disabled={agotada}
+                                        <button key={o.id} type="button" onClick={() => alternar(g, o)}
+                                            // Grupo lleno (máximo 2 ya elegidos): hay que quitar otra antes; con máximo 1 se cambia sola
+                                            disabled={agotada || (!activo && lleno(g) && maximoDe(g) !== 1 && !o.exclusiva)}
                                             title={agotada ? "No hay existencia de su insumo" : undefined}
-                                            className={`min-h-14 rounded-xl border-2 px-3 py-2 text-left text-sm transition ${activo ? "border-blue-600 bg-blue-50 font-semibold text-blue-800" : agotada ? "cursor-not-allowed border-dashed border-gray-200 bg-gray-50 text-gray-400" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
+                                            className={`min-h-14 rounded-xl border-2 px-3 py-2 text-left text-sm transition ${activo ? "border-blue-600 bg-blue-50 font-semibold text-blue-800" : agotada || (lleno(g) && maximoDe(g) !== 1 && !o.exclusiva) ? "cursor-not-allowed border-dashed border-gray-200 bg-gray-50 text-gray-400" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
                                             <span className={`block ${agotada ? "line-through" : ""}`}>{o.nombre}</span>
                                             {agotada ? <span className="text-xs font-semibold text-red-600">Agotado</span>
                                                 : (o.precio > 0 || o.obligatorio) && <span className="text-xs text-gray-500">{[o.precio > 0 ? `+${dinero(o.precio)}` : "", o.obligatorio ? "siempre va" : ""].filter(Boolean).join(" · ")}</span>}
@@ -128,7 +143,7 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                 </div>
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-6 py-4">
                     <QtyStepper value={cantidad} min={1} onChange={setCantidad} size="lg" ariaLabel="Cantidad" />
-                    {faltan.length > 0 && <p className="text-sm text-amber-700">Elige {faltan.map((g) => g.nombre).join(", ")}</p>}
+                    {faltan.length > 0 && <p className="text-sm text-amber-700">Falta: {faltan.map((g) => minimoDe(g) > 1 ? `${g.nombre} (${reglaTexto(g)})` : g.nombre).join(", ")}</p>}
                     <div className="ml-auto flex gap-2">
                         <button type="button" onClick={onCancel} className="rounded-xl bg-gray-100 px-5 py-3 font-semibold text-gray-700 hover:bg-gray-200">Cancelar</button>
                         <button type="button" disabled={faltan.length > 0}

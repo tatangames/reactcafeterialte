@@ -119,7 +119,7 @@ export const asignarCategorias = async (asignaciones: { categoria_id: number; ar
     (await api.put("/mesas/config/categorias", { asignaciones })).data as { message: string };
 
 export interface GrupoConfigInterface {
-    id: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean;
+    id: number; nombre: string; obligatorio: boolean; multiple: boolean; activo: boolean; minimo?: number; maximo?: number | null;
     opciones: {
         id: number; nombre: string; precio: number; activo: boolean; maximo?: number; obligatorio?: boolean; exclusiva?: boolean;
         producto_id: number | null; insumo: string | null; cantidad: number | null; unidad_medida_id: number | null; unidad: string | null;
@@ -138,7 +138,9 @@ export const getGruposConfig = async () =>
 
 export const guardarGrupo = async (datos: {
     nombre: string;
-    obligatorio: boolean; // hay que elegir al menos una opción del grupo
+    obligatorio: boolean; // = minimo > 0 (para versiones anteriores)
+    minimo: number;        // unidades en total del grupo, contando repeticiones (0 = opcional)
+    maximo: number | null; // null = sin tope
     // Obligatorio, «una sola» (exclusiva) y activo de cada opción
     opciones: { id?: number; nombre: string; precio: number; maximo: number; obligatorio: boolean; exclusiva: boolean; activo: boolean; producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null }[];
     productos: number[];
