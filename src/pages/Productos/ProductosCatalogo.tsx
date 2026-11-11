@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../components/Loading/LoadingModal";
+import ConfirmDeleteModal from "../../components/modal/ConfirmDeleteModal";
 import { useProductosCatalogoHook } from "../../hooks/productos/useProductoCatalogoHook";
 import { ProductoInterface } from "../../types/interfaces";
 import { STORAGE_URL } from "../../services/api";
@@ -54,6 +55,10 @@ function ListaProductos() {
         setFilterText,
         claseFiltro,
         setClaseFiltro,
+        borrando,
+        setBorrando,
+        isDeleting,
+        handleDelete,
     } = useProductosCatalogoHook();
 
     const columns = [
@@ -146,9 +151,9 @@ function ListaProductos() {
         },
         {
             name: "Acciones",
-            width: "120px",
+            width: "170px",
             cell: (row: ProductoInterface) => (
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-2">
                     <CanAccess permission="productos.gestionar">
                         <button
                             onClick={() => navigate(`/admin/productos/editar/${row.id}`)}
@@ -156,6 +161,15 @@ function ListaProductos() {
                         >
                             Editar
                         </button>
+                        {/* Solo lo que nunca se usó (ventas, compras, recetas, producción...); lo demás se desactiva */}
+                        {row.usado === false && (
+                            <button
+                                onClick={() => setBorrando(row)}
+                                className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition"
+                            >
+                                Borrar
+                            </button>
+                        )}
                     </CanAccess>
                 </div>
             ),
@@ -226,6 +240,16 @@ function ListaProductos() {
                     />
                 </div>
             </div>
+
+            <ConfirmDeleteModal
+                isOpen={!!borrando}
+                onClose={() => setBorrando(null)}
+                onConfirm={handleDelete}
+                isDeleting={isDeleting}
+                title="Borrar producto"
+                description="Nunca se ha vendido, comprado, producido ni usado en una receta. Se borra definitivamente."
+                itemName={borrando?.nombre ?? ""}
+            />
         </>
     );
 }

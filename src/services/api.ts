@@ -634,6 +634,14 @@ export const testImpresora = async (token: string, id: number) => {
 // ************************  SECCION - PRODUCTOS ***************************************************************************
 // ================================================================================================================================
 
+// BORRAR PRODUCTO (solo si nunca se usó)
+export const borrarProducto = async (token: string, id: number) => {
+    const { data } = await api.delete(`/productos/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    return data;
+};
+
 // LISTADO DE PRODUCTOS
 export const getProductosTable = async (token: string) => {
     const { data } = await api.get(
