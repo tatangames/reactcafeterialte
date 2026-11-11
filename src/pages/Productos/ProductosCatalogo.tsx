@@ -3,7 +3,7 @@ import DataTable from "react-data-table-component";
 
 import LoadingModal from "../../components/Loading/LoadingModal";
 import ConfirmDeleteModal from "../../components/modal/ConfirmDeleteModal";
-import { useProductosCatalogoHook } from "../../hooks/productos/useProductoCatalogoHook";
+import { SIN_CATEGORIA, useProductosCatalogoHook } from "../../hooks/productos/useProductoCatalogoHook";
 import { ProductoInterface } from "../../types/interfaces";
 import { STORAGE_URL } from "../../services/api";
 import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
@@ -27,6 +27,10 @@ function ListaProductos() {
         setFilterText,
         claseFiltro,
         setClaseFiltro,
+        categorias,
+        sinCategoria,
+        categoriaFiltro,
+        setCategoriaFiltro,
         borrando,
         setBorrando,
         isDeleting,
@@ -171,6 +175,17 @@ function ListaProductos() {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-3 mb-4">
+                    <select
+                        value={categoriaFiltro}
+                        onChange={(e) => setCategoriaFiltro(e.target.value)}
+                        className="h-[42px] rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-400 focus:outline-none"
+                    >
+                        <option value="">Todas las categorías</option>
+                        {categorias.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                        {sinCategoria > 0 && <option value={SIN_CATEGORIA}>Sin categoría ({sinCategoria})</option>}
+                    </select>
                     <select
                         value={claseFiltro}
                         onChange={(e) => setClaseFiltro(e.target.value)}

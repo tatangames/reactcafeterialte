@@ -7,11 +7,15 @@ import { ProductoInterface } from "../../types/interfaces";
 import { sinTildes } from "../../utils/texto";
 import { mensajeError } from "../../utils/formato";
 
+export const SIN_CATEGORIA = "__sin_categoria__";
+
 export function useProductosCatalogoHook() {
     const [data, setData] = useState<ProductoInterface[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterText, setFilterText] = useState("");
     const [claseFiltro, setClaseFiltro] = useState("");
+    // "" = todas; SIN_CATEGORIA = los que no tienen ninguna; otro = nombre de la categoría
+    const [categoriaFiltro, setCategoriaFiltro] = useState("");
     const [borrando, setBorrando] = useState<ProductoInterface | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -49,10 +53,16 @@ export function useProductosCatalogoHook() {
         }
     };
 
+    // Las categorías que tienen al menos un producto, en orden alfabético
+    const categorias = [...new Set(data.flatMap((p) => p.categorias ?? []))].sort((a, b) => a.localeCompare(b, "es"));
+    const sinCategoria = data.filter((p) => !p.categorias?.length).length;
+
     const texto = sinTildes(filterText);
     const filteredData = data.filter(
         (item) =>
             (!claseFiltro || item.clase === claseFiltro) &&
+            (!categoriaFiltro ||
+                (categoriaFiltro === SIN_CATEGORIA ? !item.categorias?.length : !!item.categorias?.includes(categoriaFiltro))) &&
             (sinTildes(item.nombre).includes(texto) ||
                 sinTildes(item.sku ?? "").includes(texto) ||
                 sinTildes(item.codigo_barras ?? "").includes(texto))
@@ -65,6 +75,10 @@ export function useProductosCatalogoHook() {
         setFilterText,
         claseFiltro,
         setClaseFiltro,
+        categorias,
+        sinCategoria,
+        categoriaFiltro,
+        setCategoriaFiltro,
         borrando,
         setBorrando,
         isDeleting,
