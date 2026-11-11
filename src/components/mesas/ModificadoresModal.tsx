@@ -88,55 +88,73 @@ function Contenido({ producto, grupos, inicial, onCancel, onConfirm }: Props & {
                     <p className="text-sm text-gray-500">{dinero(producto.precio)}</p>
                 </div>
                 <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
-                    {suyos.map((g) => (
-                        <div key={g.id}>
-                            <p className="mb-2 text-sm font-semibold text-gray-800">
-                                {g.nombre}
-                                {reglaTexto(g) && (
-                                    <span className={`ml-2 text-xs font-normal ${total(g) < minimoDe(g) ? "text-amber-700" : "text-gray-500"}`}>
-                                        {reglaTexto(g)}{maximoDe(g) !== null ? ` · llevas ${total(g)}` : ""}
+                    {/* Cada bloque como lista, una opción por renglón (como en las apps de delivery) */}
+                    {suyos.map((g, nb) => {
+                        const requerido = minimoDe(g) > 0;
+                        const faltaAqui = total(g) < minimoDe(g);
+                        const unaNomas = maximoDe(g) === 1;
+                        return (
+                            <div key={g.id} className={nb > 0 ? "border-t border-gray-100 pt-4" : ""}>
+                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                    <p className="text-base font-semibold text-gray-800">{g.nombre}</p>
+                                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${requerido ? (faltaAqui ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700") : "bg-gray-100 text-gray-600"}`}>
+                                        {requerido ? "Requerido" : "Opcional"}
                                     </span>
+                                </div>
+                                {(reglaTexto(g) || maximoDe(g) !== null) && (
+                                    <p className={`mb-2 text-xs ${faltaAqui ? "text-amber-700" : "text-gray-500"}`}>
+                                        {reglaTexto(g).replace(/^./, (c) => c.toUpperCase())}{maximoDe(g) !== null ? ` · llevas ${total(g)}` : ""}
+                                    </p>
                                 )}
-                            </p>
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                                {g.opciones.map((o) => {
-                                    const activo = elegidos[g.id]?.includes(o.id);
-                                    // Sin existencia de su insumo no se elige (si ya venía elegida, se puede quitar)
-                                    const agotada = !!o.agotado && !activo;
-                                    const maximo = Math.max(1, o.maximo ?? 1);
-                                    if (maximo > 1 && !agotada) {
+                                <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
+                                    {g.opciones.map((o) => {
+                                        const activo = !!elegidos[g.id]?.includes(o.id);
+                                        // Sin existencia de su insumo no se elige (si ya venía elegida, se puede quitar)
+                                        const agotada = !!o.agotado && !activo;
+                                        const maximo = Math.max(1, o.maximo ?? 1);
                                         const n = veces(g, o.id);
-                                        return (
-                                            <div key={o.id} className={`min-h-14 rounded-xl border-2 px-3 py-2 text-sm ${n > 0 ? "border-blue-600 bg-blue-50" : "border-gray-200"}`}>
-                                                <button type="button" onClick={() => n === 0 && cambiarVeces(g, o, 1, maximo)} disabled={n === 0 && lleno(g) && !o.exclusiva} className="block w-full text-left disabled:opacity-50">
-                                                    <span className={`block ${n > 0 ? "font-semibold text-blue-800" : "text-gray-700"}`}>{o.nombre}</span>
-                                                    <span className="text-xs text-gray-500">{o.precio > 0 ? `+${dinero(o.precio)} c/u · ` : ""}hasta {maximo}{o.obligatorio ? " · siempre va" : ""}</span>
-                                                </button>
-                                                <div className="mt-1 flex items-center gap-2">
-                                                    <button type="button" onClick={() => cambiarVeces(g, o, -1, maximo)} disabled={n <= (o.obligatorio ? 1 : 0)} aria-label={`Quitar ${o.nombre}`}
-                                                        className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">−</button>
-                                                    <span className="w-6 text-center text-base font-bold">{n}</span>
-                                                    <button type="button" onClick={() => cambiarVeces(g, o, 1, maximo)} disabled={n >= maximo || (lleno(g) && !o.exclusiva)} aria-label={`Agregar ${o.nombre}`}
-                                                        className="h-9 w-9 rounded-lg bg-white text-lg font-bold text-gray-700 shadow-sm disabled:opacity-30">+</button>
-                                                </div>
-                                            </div>
+                                        // Bloque lleno (máximo 2 ya elegidos): hay que quitar otra antes; con máximo 1 se cambia sola
+                                        const bloqueada = !activo && lleno(g) && !unaNomas && !o.exclusiva;
+                                        const precio = (
+                                            <span className="block text-xs text-gray-500">
+                                                {agotada ? <b className="text-red-600">Agotado</b>
+                                                    : [o.precio > 0 ? `+${dinero(o.precio)}${maximo > 1 ? " c/u" : ""}` : "", o.obligatorio ? "siempre va" : ""].filter(Boolean).join(" · ")}
+                                            </span>
                                         );
-                                    }
-                                    return (
-                                        <button key={o.id} type="button" onClick={() => alternar(g, o)}
-                                            // Grupo lleno (máximo 2 ya elegidos): hay que quitar otra antes; con máximo 1 se cambia sola
-                                            disabled={agotada || (!activo && lleno(g) && maximoDe(g) !== 1 && !o.exclusiva)}
-                                            title={agotada ? "No hay existencia de su insumo" : undefined}
-                                            className={`min-h-14 rounded-xl border-2 px-3 py-2 text-left text-sm transition ${activo ? "border-blue-600 bg-blue-50 font-semibold text-blue-800" : agotada || (lleno(g) && maximoDe(g) !== 1 && !o.exclusiva) ? "cursor-not-allowed border-dashed border-gray-200 bg-gray-50 text-gray-400" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
-                                            <span className={`block ${agotada ? "line-through" : ""}`}>{o.nombre}</span>
-                                            {agotada ? <span className="text-xs font-semibold text-red-600">Agotado</span>
-                                                : (o.precio > 0 || o.obligatorio) && <span className="text-xs text-gray-500">{[o.precio > 0 ? `+${dinero(o.precio)}` : "", o.obligatorio ? "siempre va" : ""].filter(Boolean).join(" · ")}</span>}
-                                        </button>
-                                    );
-                                })}
+                                        if (maximo > 1 && !agotada) {
+                                            return (
+                                                <div key={o.id} className={`flex items-center gap-3 px-4 py-2.5 ${n > 0 ? "bg-blue-50" : "bg-white"}`}>
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className={`block text-sm ${n > 0 ? "font-semibold text-blue-800" : "text-gray-800"}`}>{o.nombre}</span>
+                                                        {precio}
+                                                    </div>
+                                                    <button type="button" onClick={() => cambiarVeces(g, o, -1, maximo)} disabled={n <= (o.obligatorio ? 1 : 0)} aria-label={`Quitar ${o.nombre}`}
+                                                        className="h-9 w-9 rounded-full bg-blue-600 text-lg font-bold text-white disabled:bg-gray-200 disabled:text-gray-400">−</button>
+                                                    <span className="w-7 text-center text-base font-bold">{n}</span>
+                                                    <button type="button" onClick={() => cambiarVeces(g, o, 1, maximo)} disabled={n >= maximo || (lleno(g) && !o.exclusiva)} aria-label={`Agregar ${o.nombre}`}
+                                                        className="h-9 w-9 rounded-full bg-blue-600 text-lg font-bold text-white disabled:bg-gray-200 disabled:text-gray-400">+</button>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <button key={o.id} type="button" onClick={() => alternar(g, o)} disabled={agotada || bloqueada}
+                                                title={agotada ? "No hay existencia de su insumo" : undefined}
+                                                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${activo ? "bg-blue-50" : "bg-white hover:bg-gray-50"} disabled:cursor-not-allowed disabled:opacity-50`}>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className={`block text-sm ${activo ? "font-semibold text-blue-800" : "text-gray-800"} ${agotada ? "line-through" : ""}`}>{o.nombre}</span>
+                                                    {precio}
+                                                </div>
+                                                {/* Redondo si se elige una sola; cuadrado si se pueden varias */}
+                                                <span className={`flex h-6 w-6 shrink-0 items-center justify-center border-2 ${unaNomas ? "rounded-full" : "rounded-md"} ${activo ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"}`}>
+                                                    {activo && (unaNomas ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : <span className="text-sm font-bold leading-none">✓</span>)}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     <div>
                         <p className="mb-2 text-sm font-semibold text-gray-800">Nota para cocina</p>
                         <input value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={200} placeholder="Ej.: con hielo aparte, sin azúcar"
