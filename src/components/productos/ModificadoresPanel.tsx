@@ -160,7 +160,9 @@ export default function ModificadoresPanel() {
                                 {g.opciones.some(o => o.activo && o.insumo) && (
                                     <p className="mt-1 text-xs text-gray-500">Descuenta: {g.opciones.filter(o => o.activo && o.insumo).map(o => `${o.insumo} ${o.cantidad} ${o.unidad ?? ''}`.trim()).join(' · ')}</p>
                                 )}
-                                <p className="mt-1 text-xs text-gray-500">{g.productos.length} producto(s)</p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {g.productos.length ? <>En: <span className="text-gray-700">{g.productos.map(p => p.nombre).join(', ')}</span></> : 'No está asignado a ningún producto'}
+                                </p>
                             </button>
                         ))}
                     </div>
