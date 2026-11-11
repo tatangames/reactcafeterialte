@@ -130,9 +130,9 @@ export interface GrupoConfigInterface {
 export interface InsumoModificadorInterface { id: number; nombre: string; unidad_medida_id: number | null; unidad: string | null; tipo: string | null }
 export interface UnidadModificadorInterface { id: number; nombre: string; abreviatura: string; tipo: string }
 
-// Tarjeta de modificadores («Bebidas con leche»): sus bloques en orden y los productos que la llevan
+// Los modificadores propios de un producto: sus bloques en orden (Tipo de leche, Azúcar, Extras)
 export interface ConjuntoConfigInterface {
-    id: number; nombre: string; bloques: GrupoConfigInterface[]; productos: { id: number; nombre: string }[];
+    id: number; producto_id: number; producto: string; bloques: GrupoConfigInterface[];
 }
 
 // Una opción al guardar: obligatoria, «una sola» (exclusiva) y activa son de cada opción
@@ -141,28 +141,19 @@ export interface OpcionGuardar {
     producto_id: number | null; cantidad: number | null; unidad_medida_id: number | null;
 }
 
+// minimo/maximo: unidades en total del bloque, contando repeticiones (0 = opcional; null = sin tope)
+export interface BloqueGuardar { id?: number; nombre: string; minimo: number; maximo: number | null; opciones: OpcionGuardar[] }
+
 export const getGruposConfig = async () =>
     (await api.get("/mesas/config/modificadores")).data as {
         conjuntos: ConjuntoConfigInterface[]; grupos: GrupoConfigInterface[];
-        // conjunto_id: la tarjeta que ya lleva (un producto lleva una sola)
+        // conjunto_id: sus modificadores, si ya tiene
         productos: { id: number; nombre: string; conjunto_id: number | null }[];
         insumos: InsumoModificadorInterface[]; unidades: UnidadModificadorInterface[];
     };
 
-export const guardarConjunto = async (datos: {
-    nombre: string;
-    // minimo/maximo: unidades en total del bloque, contando repeticiones (0 = opcional; null = sin tope)
-    bloques: { id?: number; nombre: string; minimo: number; maximo: number | null; opciones: OpcionGuardar[] }[];
-    productos: number[];
-}, id?: number) =>
-    (id ? await api.put(`/mesas/config/conjuntos/${id}`, datos) : await api.post("/mesas/config/conjuntos", datos)).data as { id: number; message: string };
+export const guardarModificadoresProducto = async (productoId: number, bloques: BloqueGuardar[]) =>
+    (await api.put(`/mesas/config/productos/${productoId}/modificadores`, { bloques })).data as { id: number; message: string };
 
-export const borrarConjunto = async (id: number) =>
-    (await api.delete(`/mesas/config/conjuntos/${id}`)).data as { message: string };
-
-// La tarjeta de modificadores de un producto (o null)
-export const getConjuntoProducto = async (productoId: number) =>
-    (await api.get(`/mesas/config/productos/${productoId}/modificadores`)).data as { conjunto_id: number | null };
-
-export const asignarConjuntoProducto = async (productoId: number, conjuntoId: number | null) =>
-    (await api.put(`/mesas/config/productos/${productoId}/modificadores`, { conjunto_id: conjuntoId })).data as { message: string };
+export const quitarModificadoresProducto = async (productoId: number) =>
+    (await api.delete(`/mesas/config/productos/${productoId}/modificadores`)).data as { message: string };

@@ -5,10 +5,9 @@ import FormField, { inputClass } from '../form/FormField';
 import MoneyInput from '../form/MoneyInput';
 import SelectBuscador from '../form/SelectBuscador';
 import {
-    ConjuntoConfigInterface, guardarConjunto, InsumoModificadorInterface, UnidadModificadorInterface,
+    ConjuntoConfigInterface, guardarModificadoresProducto, InsumoModificadorInterface, UnidadModificadorInterface,
 } from '../../services/mesas';
 import { mensajeError } from '../../utils/formato';
-import { sinTildes } from '../../utils/texto';
 import { minimoDe, reglaTexto } from '../../utils/modificadores';
 
 // Una opción del formulario: el insumo es opcional (Revueltos no gasta nada; Fresa gasta 30 g)
@@ -24,26 +23,24 @@ const opcionVacia = (): OpcionForm => ({ nombre: '', precio: '', maximo: '1', ob
 let siguiente = 0;
 const bloqueVacio = (): BloqueForm => ({ clave: `n${++siguiente}`, nombre: '', minimo: '', maximo: '', opciones: [opcionVacia()] });
 
-const aFormulario = (c: ConjuntoConfigInterface | null) => ({
-    nombre: c?.nombre ?? '',
-    productos: c?.productos.map(p => p.id) ?? [],
-    bloques: c ? c.bloques.map((g): BloqueForm => ({
-        clave: `g${g.id}`, id: g.id, nombre: g.nombre,
+// copia: los bloques de otro producto sin sus ids, así se guardan como propios
+const aBloques = (c: ConjuntoConfigInterface | null, copia = false): BloqueForm[] =>
+    c ? c.bloques.map((g): BloqueForm => ({
+        clave: `n${++siguiente}`, id: copia ? undefined : g.id, nombre: g.nombre,
         minimo: minimoDe(g) ? String(minimoDe(g)) : '', maximo: g.maximo ? String(g.maximo) : '',
-        opciones: g.opciones.map(o => ({
-            id: o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
+        opciones: g.opciones.filter(o => !copia || o.activo).map(o => ({
+            id: copia ? undefined : o.id, nombre: o.nombre, precio: o.precio ? String(o.precio) : '', maximo: String(o.maximo ?? 1),
             obligatorio: !!o.obligatorio, exclusiva: !!o.exclusiva, activo: o.activo,
             producto_id: o.producto_id ? String(o.producto_id) : '', cantidad: o.cantidad ? String(o.cantidad) : '',
             unidad_medida_id: o.unidad_medida_id ? String(o.unidad_medida_id) : '',
         })),
-    })) : [bloqueVacio()],
-});
+    })) : [bloqueVacio()];
 
 // «¿Cómo funciona?»: tarjeta, bloques y opciones, con ejemplos
 function Ayuda() {
     return (
         <div className="space-y-2 rounded-lg bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
-            <p>Una <b>tarjeta</b> junta todo lo que se elige al vender un producto, como en las apps de delivery. Ej.: «Bebidas con leche» con los bloques <b>1. Tipo de leche</b> (requerido, elige 1), <b>2. Azúcar</b> (opcional, máximo 1) y <b>3. Extras</b> (opcional). Se asigna a los productos que la llevan; cada producto lleva <b>una sola</b> tarjeta.</p>
+            <p>Los modificadores de cada producto van en <b>bloques</b>, como en las apps de delivery. Ej.: el Chocolate con <b>1. Tipo de leche</b> (requerido, elige 1), <b>2. Azúcar</b> (opcional, máximo 1) y <b>3. Extras</b> (opcional). Son <b>solo de este producto</b>: cambiarlos no toca a ningún otro. Para no escribirlos de nuevo, usa «Copiar de otro producto» y ajusta lo que cambie.</p>
             <p><b>Requerido:</b> no deja agregar el producto hasta elegir el mínimo. <b>Opcional:</b> se puede dejar sin elegir. Mínimo y máximo cuentan las opciones del bloque en total, contando cada vez que se repite una. Con máximo 1, tocar otra opción la cambia.</p>
             <p><b>Precio extra:</b> se suma al producto (Deslactosada +$0.25). En blanco: gratis. <b>Insumo:</b> lo que se descuenta del inventario al venderse con esa opción (Leche entera 250 ml).</p>
             <p>Casillas de cada opción: <b>Obligatorio</b> siempre va marcada; <b>Una sola</b> al elegirla quita todas las demás del bloque; <b>Activa</b> apagada no sale al vender.</p>
@@ -52,25 +49,30 @@ function Ayuda() {
 }
 
 interface Props {
-    conjunto: ConjuntoConfigInterface | null;          // null: tarjeta nueva
-    conjuntos: ConjuntoConfigInterface[];              // para decir qué tarjeta lleva ya cada producto
+    producto: { id: number; nombre: string } | null;   // null: se elige aquí (uno que aún no tenga modificadores)
+    conjunto: ConjuntoConfigInterface | null;          // sus modificadores actuales (null: aún no tiene)
+    conjuntos: ConjuntoConfigInterface[];              // los de otros productos, para copiarlos
     productos: { id: number; nombre: string; conjunto_id: number | null }[];
     insumos: InsumoModificadorInterface[];
     unidades: UnidadModificadorInterface[];
-    productosIniciales?: number[];                     // tarjeta nueva creada desde un producto: ya lo lleva
     onCerrar: () => void;
-    onGuardado: (id: number) => void;
+    onGuardado: (productoId: number) => void;
 }
 
-/** Ventana para crear o editar una tarjeta de modificadores: sus bloques en orden y los productos que la llevan. */
-export default function EditorConjuntoModificadores({ conjunto, conjuntos, productos, insumos, unidades, productosIniciales = [], onCerrar, onGuardado }: Props) {
-    const [form, setForm] = useState(() => {
-        const f = aFormulario(conjunto);
-        return conjunto ? f : { ...f, productos: productosIniciales };
-    });
+/** Ventana para crear o editar los modificadores de un producto, en bloques, como en las apps de delivery. */
+export default function EditorConjuntoModificadores({ producto, conjunto, conjuntos, productos, insumos, unidades, onCerrar, onGuardado }: Props) {
+    const [productoId, setProductoId] = useState<number | null>(producto?.id ?? null);
+    const [form, setForm] = useState(() => ({ bloques: aBloques(conjunto) }));
     const [guardando, setGuardando] = useState(false);
     const [verAyuda, setVerAyuda] = useState(false);
-    const [buscarProducto, setBuscarProducto] = useState('');
+    const otros = conjuntos.filter(c => c.producto_id !== productoId);
+    const nombreProducto = producto?.nombre ?? productos.find(p => p.id === productoId)?.nombre;
+
+    const copiarDe = (c: ConjuntoConfigInterface) => {
+        const conBloques = form.bloques.some(b => b.nombre.trim() || b.opciones.some(o => o.nombre.trim()));
+        if (conBloques && !window.confirm(`¿Reemplazar los bloques por los de «${c.producto}»? Después puedes cambiarlos: son solo de este producto.`)) return;
+        setForm({ bloques: aBloques(c, true) });
+    };
 
     const cambiarBloque = (n: number, c: Partial<BloqueForm>) => setForm(f => ({ ...f, bloques: f.bloques.map((b, i) => i === n ? { ...b, ...c } : b) }));
     const moverBloque = (n: number, d: -1 | 1) => setForm(f => {
@@ -78,16 +80,11 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
         [bloques[n], bloques[n + d]] = [bloques[n + d], bloques[n]];
         return { ...f, bloques };
     });
-    const tarjetaDe = (productoId: number) => {
-        const id = productos.find(p => p.id === productoId)?.conjunto_id;
-        return id && id !== conjunto?.id ? conjuntos.find(c => c.id === id)?.nombre ?? 'otra tarjeta' : null;
-    };
-
     const errorBloques = form.bloques.find(b => {
         const min = Number(b.minimo) || 0;
         return b.maximo.trim() !== '' && min > Number(b.maximo);
     });
-    const error = !form.nombre.trim() ? 'Ponle un nombre a la tarjeta'
+    const error = !productoId ? 'Elige el producto'
         : form.bloques.length === 0 ? 'Agrega al menos un bloque'
             : form.bloques.some(b => !b.nombre.trim()) ? 'Cada bloque necesita un nombre'
                 : form.bloques.some(b => !b.opciones.some(o => o.nombre.trim())) ? 'Cada bloque necesita al menos una opción'
@@ -96,10 +93,7 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
     const guardar = async () => {
         setGuardando(true);
         try {
-            const r = await guardarConjunto({
-                nombre: form.nombre.trim(),
-                productos: form.productos,
-                bloques: form.bloques.map(b => ({
+            const r = await guardarModificadoresProducto(productoId!, form.bloques.map(b => ({
                     id: b.id, nombre: b.nombre.trim(),
                     minimo: Math.max(0, Math.floor(Number(b.minimo) || 0)),
                     maximo: b.maximo.trim() ? Math.max(1, Math.floor(Number(b.maximo) || 1)) : null,
@@ -111,10 +105,9 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
                         cantidad: o.producto_id ? Number(o.cantidad || 0) : null,
                         unidad_medida_id: o.producto_id && o.unidad_medida_id ? Number(o.unidad_medida_id) : null,
                     })),
-                })),
-            }, conjunto?.id);
+                })));
             toast.success(r.message);
-            onGuardado(r.id ?? conjunto?.id ?? 0);
+            onGuardado(productoId!);
         } catch (e) {
             toast.error(mensajeError(e, 'No se pudo guardar'));
         } finally {
@@ -126,7 +119,7 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
             <div className="max-h-[94vh] w-full max-w-3xl space-y-4 overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
                 <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-semibold">{conjunto ? `Editar ${conjunto.nombre}` : 'Nueva tarjeta de modificadores'}</h2>
+                    <h2 className="text-lg font-semibold">{nombreProducto ? `Modificadores de ${nombreProducto}` : 'Agregar modificadores a un producto'}</h2>
                     <button type="button" onClick={() => setVerAyuda(v => !v)} aria-expanded={verAyuda}
                         className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${verAyuda ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600'}`}>
                         <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current text-[10px] font-bold">?</span>
@@ -135,10 +128,20 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
                 </div>
                 {verAyuda && <Ayuda />}
 
-                <FormField label="Nombre de la tarjeta" required hint="Para reconocerla: no lo ve el mesero. Ej.: Bebidas con leche, Desayunos.">
-                    <input className={inputClass} value={form.nombre} maxLength={80} autoFocus placeholder="Bebidas con leche"
-                        onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} />
-                </FormField>
+                {!producto && (
+                    <FormField label="Producto" required hint="Solo salen los que aún no tienen modificadores.">
+                        <SelectBuscador value={productoId} placeholder="Buscar producto..."
+                            opciones={productos.filter(p => !p.conjunto_id).map(p => ({ value: p.id, label: p.nombre }))}
+                            onChange={v => setProductoId(v)} />
+                    </FormField>
+                )}
+                {otros.length > 0 && (
+                    <FormField label="Copiar de otro producto" hint="Trae sus bloques y opciones; después cámbialos sin tocar al otro producto.">
+                        <SelectBuscador value={null} placeholder="Buscar producto que ya tiene modificadores..."
+                            opciones={otros.map(c => ({ value: c.id, label: `${c.producto} · ${c.bloques.map(b => b.nombre).join(', ')}` }))}
+                            onChange={v => { const c = otros.find(x => x.id === v); if (c) copiarDe(c); }} />
+                    </FormField>
+                )}
 
                 <div className="space-y-4">
                     {form.bloques.map((b, n) => {
@@ -246,23 +249,6 @@ export default function EditorConjuntoModificadores({ conjunto, conjuntos, produ
                         + Agregar bloque
                     </button>
                 </div>
-
-                <FormField label={`Productos que la llevan (${form.productos.length})`} hint="Cada producto lleva una sola tarjeta: los que ya tienen otra salen desactivados.">
-                    <input className={`${inputClass} mb-2`} value={buscarProducto} onChange={e => setBuscarProducto(e.target.value)} placeholder="Buscar producto" />
-                    <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
-                        {productos.filter(p => sinTildes(p.nombre).includes(sinTildes(buscarProducto.trim()))).map(p => {
-                            const otra = tarjetaDe(p.id);
-                            return (
-                                <label key={p.id} className={`flex items-center gap-2 px-3 py-2 text-sm ${otra ? 'cursor-not-allowed text-gray-400' : 'hover:bg-gray-50'}`}>
-                                    <input type="checkbox" className="h-4 w-4" disabled={!!otra} checked={form.productos.includes(p.id)}
-                                        onChange={e => setForm(f => ({ ...f, productos: e.target.checked ? [...f.productos, p.id] : f.productos.filter(x => x !== p.id) }))} />
-                                    {p.nombre}
-                                    {otra && <span className="ml-auto text-xs">ya lleva «{otra}»</span>}
-                                </label>
-                            );
-                        })}
-                    </div>
-                </FormField>
 
                 <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
                     {error && <p className="mr-auto text-sm text-red-600">{error}</p>}

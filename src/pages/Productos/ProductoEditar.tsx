@@ -62,7 +62,7 @@ export default function ProductoEditar() {
                 {/* Bloques de modificadores (Tipo de leche, Salsa...): se guardan al momento, aparte del producto */}
                 {productoId && hasPermission("mesas.configurar") && (
                     <div className="mt-6">
-                        <ProductoModificadores productoId={Number(productoId)} />
+                        <ProductoModificadores productoId={Number(productoId)} nombre={form.nombre} />
                     </div>
                 )}
 
