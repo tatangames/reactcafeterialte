@@ -6,6 +6,7 @@ import { sinTildes } from "../../utils/texto";
 export interface OpcionBuscador {
     value: number;
     label: string;
+    detalle?: string; // texto pequeño debajo, en la lista (ej. la clase del producto)
 }
 
 interface SelectBuscadorProps {
@@ -113,6 +114,7 @@ export default function SelectBuscador({ opciones, value, onChange, placeholder 
                             onMouseEnter={() => setActivo(i)}
                             className={`cursor-pointer px-4 py-2 ${i === activo ? "bg-blue-50 text-blue-700" : "text-gray-800"} ${o.value === value ? "font-semibold" : ""}`}>
                             {o.label}
+                            {o.detalle && <span className="block text-xs font-normal text-gray-500">{o.detalle}</span>}
                         </li>
                     ))}
                 </ul>

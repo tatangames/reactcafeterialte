@@ -7,7 +7,7 @@ import SelectBuscador from '../form/SelectBuscador';
 import {
     BloqueGuardar, ConjuntoConfigInterface, guardarModificadoresProducto, InsumoModificadorInterface, UnidadModificadorInterface,
 } from '../../services/mesas';
-import { mensajeError } from '../../utils/formato';
+import { CLASES_PRODUCTO, mensajeError } from '../../utils/formato';
 import { AYUDAS, ClaveAyuda, minimoDe, reglaTexto } from '../../utils/modificadores';
 
 // Una opción del formulario: el insumo es opcional (Revueltos no gasta nada; Fresa gasta 30 g)
@@ -235,7 +235,7 @@ export default function EditorConjuntoModificadores({ producto, conjunto, insumo
                                                     <div className="min-w-0 flex-1">
                                                         <SelectBuscador value={o.producto_id ? Number(o.producto_id) : 0} placeholder="Buscar insumo que descuenta..."
                                                             opciones={[{ value: 0, label: 'No descuenta inventario' },
-                                                                ...insumos.map(i => ({ value: i.id, label: i.unidad ? `${i.nombre} (${i.unidad})` : i.nombre }))]}
+                                                                ...insumos.map(i => ({ value: i.id, label: i.unidad ? `${i.nombre} (${i.unidad})` : i.nombre, detalle: i.clase ? CLASES_PRODUCTO[i.clase as keyof typeof CLASES_PRODUCTO] ?? i.clase : undefined }))]}
                                                             onChange={v => {
                                                                 const elegido = v ? insumos.find(i => i.id === v) : undefined;
                                                                 cambiar({ producto_id: elegido ? String(elegido.id) : '', unidad_medida_id: elegido?.unidad_medida_id ? String(elegido.unidad_medida_id) : '' });

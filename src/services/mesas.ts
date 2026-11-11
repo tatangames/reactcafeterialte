@@ -127,7 +127,7 @@ export interface GrupoConfigInterface {
     productos: { id: number; nombre: string }[];
 }
 
-export interface InsumoModificadorInterface { id: number; nombre: string; unidad_medida_id: number | null; unidad: string | null; tipo: string | null }
+export interface InsumoModificadorInterface { id: number; nombre: string; unidad_medida_id: number | null; unidad: string | null; tipo: string | null; clase?: string }
 export interface UnidadModificadorInterface { id: number; nombre: string; abreviatura: string; tipo: string }
 
 // Los modificadores propios de un producto: sus bloques en orden (Tipo de leche, Azúcar, Extras)
