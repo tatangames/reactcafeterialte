@@ -144,8 +144,9 @@ export interface OpcionGuardar {
 // minimo/maximo: unidades en total del bloque, contando repeticiones (0 = opcional; null = sin tope)
 export interface BloqueGuardar { id?: number; nombre: string; minimo: number; maximo: number | null; opciones: OpcionGuardar[] }
 
+// 20 s como máximo: si el servidor no contesta, la pantalla lo dice en vez de quedarse cargando
 export const getGruposConfig = async () =>
-    (await api.get("/mesas/config/modificadores")).data as {
+    (await api.get("/mesas/config/modificadores", { timeout: 20000 })).data as {
         conjuntos: ConjuntoConfigInterface[]; grupos: GrupoConfigInterface[];
         // conjunto_id: sus modificadores, si ya tiene
         productos: { id: number; nombre: string; conjunto_id: number | null }[];

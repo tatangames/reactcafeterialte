@@ -42,9 +42,17 @@ export default function ProductoModificadores({ productoId, nombre, pendientes =
     const [config, setConfig] = useState<Config | null>(null);
     const [editando, setEditando] = useState(false);
     const [quitando, setQuitando] = useState(false);
+    const [falla, setFalla] = useState<string | null>(null);
 
     const cargar = useCallback(() => {
-        getGruposConfig().then(setConfig).catch(e => toast.error(mensajeError(e, 'No se pudieron cargar los modificadores')));
+        setFalla(null);
+        getGruposConfig()
+            .then(datos => {
+                // Una respuesta sin la lista de modificadores (API sin actualizar) también es falla
+                if (!datos || !Array.isArray(datos.conjuntos)) throw new Error('El servidor no envió los modificadores. ¿Está actualizada la API?');
+                setConfig(datos);
+            })
+            .catch(e => setFalla(e?.code === 'ECONNABORTED' ? 'El servidor tardó demasiado en responder.' : mensajeError(e, 'No se pudieron cargar los modificadores.')));
     }, []);
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -91,7 +99,13 @@ export default function ProductoModificadores({ productoId, nombre, pendientes =
                 )}
             </div>
 
-            {!config ? <Cargando className="py-6" /> : suyos ? (
+            {!config && falla ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-center text-sm text-red-700">
+                    <p>No se pudieron cargar los modificadores. {falla}</p>
+                    <button type="button" onClick={cargar}
+                        className="mt-3 rounded-lg border border-red-300 bg-white px-4 py-2 font-medium text-red-700 hover:bg-red-100">Reintentar</button>
+                </div>
+            ) : !config ? <Cargando className="py-6" /> : suyos ? (
                 <div className="rounded-xl border border-gray-200 p-4"><VistaTarjetaModificadores conjunto={suyos} /></div>
             ) : (
                 <p className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
