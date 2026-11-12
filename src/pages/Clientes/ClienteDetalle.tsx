@@ -125,7 +125,7 @@ export default function ClienteDetalle() {
             <ClienteFormModal isOpen={editando} cliente={cliente} onClose={() => setEditando(false)}
                 onSaved={() => { setEditando(false); cargar(); }} />
             <PagoCajaModal isOpen={abonando} titulo={`Abono de ${cliente.nombre}`}
-                descripcion="Entra a la caja del turno y se aplica a las cuentas más antiguas primero."
+                descripcion="Queda en el turno abierto y se aplica a las cuentas más antiguas primero. Solo el efectivo entra a la gaveta; tarjeta y transferencia llegan al banco."
                 maximo={cliente.saldo} metodos={catalogos?.metodos_pago ?? []} isLoading={guardando}
                 onClose={() => setAbonando(false)} onConfirm={abonar} />
             <MotivoModal isOpen={!!anulando} titulo={`Anular abono ${anulando?.numero ?? ''}`}
