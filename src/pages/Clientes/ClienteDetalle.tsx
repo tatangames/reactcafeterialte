@@ -8,6 +8,7 @@ import Paginacion from '../../components/common/Paginacion';
 import StatusBadge from '../../components/common/StatusBadge';
 import MotivoModal from '../../components/modal/MotivoModal';
 import ClienteFormModal from '../../components/clientes/ClienteFormModal';
+import AyudaCredito from '../../components/clientes/AyudaCredito';
 import PagoCajaModal, { PagoCajaForm } from '../../components/clientes/PagoCajaModal';
 import { useAuth } from '../../context/AuthContext';
 import { useCaja } from '../../context/CajaContext';
@@ -34,6 +35,7 @@ export default function ClienteDetalle() {
     const puedeCuentas = hasPermission('cuentas_cobrar.gestionar');
 
     const [datos, setDatos] = useState<ClienteDetalleInterface | null>(null);
+    const [verAyuda, setVerAyuda] = useState(false);
     const [pestana, setPestana] = useState<Pestana>(puedeCuentas ? 'pendientes' : 'compras');
     const [editando, setEditando] = useState(false);
     const [abonando, setAbonando] = useState(false);
@@ -134,6 +136,11 @@ export default function ClienteDetalle() {
                 subtitle={[cliente.documento, cliente.telefono, cliente.correo].filter(Boolean).join(' · ') || undefined}
                 actions={<>
                     {!cliente.activo && <StatusBadge tone="neutral">Inactivo</StatusBadge>}
+                    <button type="button" onClick={() => setVerAyuda(v => !v)} aria-expanded={verAyuda}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2.5 text-sm font-medium transition ${verAyuda ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600'}`}>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold ${verAyuda ? 'border-white' : 'border-current'}`}>?</span>
+                        ¿Cómo funciona el crédito?
+                    </button>
                     {hasPermission('clientes.gestionar') && (
                         <button type="button" onClick={() => setEditando(true)}
                             className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Editar</button>
@@ -146,6 +153,8 @@ export default function ClienteDetalle() {
                         </button>
                     )}
                 </>} />
+
+            {verAyuda && <AyudaCredito />}
 
             <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className={tarjeta}>
