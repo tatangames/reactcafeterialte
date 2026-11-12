@@ -178,6 +178,8 @@ export default function LineasCompra({ lineas, productos, unidades, onChange, bl
                                         </td>
                                         <td className="px-3 py-2">
                                             <MoneyInput prefix="$" decimals={4} value={l.costo_unitario} onChange={(v) => cambiar(l.clave, { costo_unitario: v })} />
+                                            {/* El costo es por la unidad elegida: con «Fardo» es lo que cuesta un fardo */}
+                                            {unidad && base && unidad.id !== base.id && <p className="mt-1 text-xs text-gray-500">por {unidad.nombre}</p>}
                                         </td>
                                         <td className="px-3 py-2 pt-4 text-right font-semibold">{dinero(sub)}</td>
                                         <td className="px-1 py-2">
