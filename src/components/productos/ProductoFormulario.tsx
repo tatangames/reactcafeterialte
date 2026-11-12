@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import AyudaClases from "./AyudaClases";
@@ -6,6 +6,7 @@ import FormField, { inputClass } from "../form/FormField";
 import MoneyInput from "../form/MoneyInput";
 import SelectBuscador from "../form/SelectBuscador";
 import OrdenPosCampo from "./OrdenPosCampo";
+import { getOrdenPos } from "../../services/ordenPos";
 import { CategoriasInterface, ClaseProducto, ProductoFormInterface, UnidadMedidaInterface } from "../../types/interfaces";
 import { CLASES_PRODUCTO, cantidad, dinero } from "../../utils/formato";
 import { COLORES_POS, defaultsPorClase, margen } from "../../utils/productoForm";
@@ -68,6 +69,16 @@ export default function ProductoFormulario({
     const abrev = unidadSel?.abreviatura ?? unidadSel?.nombre ?? "";
     const m = margen(form.costo_unitario, form.precio_venta);
     const [verAyudaClase, setVerAyudaClase] = useState(false);
+    // Colores propios que ya usan otros productos (elegidos con «Otro color»), para repetirlos con un toque
+    const [usados, setUsados] = useState<string[]>([]);
+    useEffect(() => {
+        getOrdenPos()
+            .then((d) => setUsados([...new Set(d.productos.map((p) => p.color_pos?.toUpperCase()).filter((c): c is string => !!c))]))
+            .catch(() => null);
+    }, []);
+    const actual = form.color_pos.toUpperCase();
+    // La paleta fija, los ya usados y el que tiene este producto (aunque nadie más lo use)
+    const propios = [...usados, ...(actual ? [actual] : [])].filter((c, i, a) => !COLORES_POS.includes(c) && a.indexOf(c) === i);
 
     const cambiarClase = (clase: ClaseProducto) => {
         Object.entries(defaultsPorClase(clase)).forEach(([k, v]) =>
@@ -308,9 +319,9 @@ export default function ProductoFormulario({
                                     className={`h-8 w-8 rounded-full border-2 bg-white text-xs text-gray-400 ${!form.color_pos ? "border-gray-800" : "border-gray-200"}`}>
                                     ✕
                                 </button>
-                                {COLORES_POS.map((c) => (
+                                {[...COLORES_POS, ...propios].map((c) => (
                                     <button key={c} type="button" onClick={() => onChange("color_pos", c)} title={c}
-                                        className={`h-8 w-8 rounded-full border-2 ${form.color_pos.toUpperCase() === c ? "border-gray-800" : "border-white"}`}
+                                        className={`h-8 w-8 rounded-full border-2 ${actual === c ? "border-gray-800" : "border-white"}`}
                                         style={{ backgroundColor: c }} />
                                 ))}
                                 <input type="color" value={form.color_pos || "#ffffff"} title="Otro color"
