@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import CarritoPanel from '../../components/pos/CarritoPanel';
 import CantidadModal from '../../components/pos/CantidadModal';
 import CobroModal from '../../components/pos/CobroModal';
+import ClienteBuscador from '../../components/clientes/ClienteBuscador';
 import EstadoConexion from '../../components/pos/EstadoConexion';
 import DescuentoModal from '../../components/pos/DescuentoModal';
 import PrecuentasModal from '../../components/pos/PrecuentasModal';
@@ -60,6 +61,7 @@ export default function PosPage() {
     const [cantidadDe, setCantidadDe] = useState<{ producto: ProductoPosInterface; inicial?: number; clave?: string } | null>(null);
     const [descuentoDe, setDescuentoDe] = useState<LineaCarritoInterface | 'global' | null>(null);
     const [precuentasAbiertas, setPrecuentasAbiertas] = useState(false);
+    const [eligiendoCliente, setEligiendoCliente] = useState(false);
     const [nombrePrecuenta, setNombrePrecuenta] = useState<string | null>(null);
     // Extras al tocar el producto (o al editar una línea del carrito) e ingredientes de una línea
     const [extrasDe, setExtrasDe] = useState<{ producto: ProductoPosInterface; linea?: LineaCarritoInterface } | null>(null);
@@ -210,6 +212,8 @@ export default function PosPage() {
                         totales={pos.totales}
                         precuenta={pos.carrito.precuenta}
                         cliente={pos.carrito.cliente}
+                        onElegirCliente={() => setEligiendoCliente(true)}
+                        onQuitarCliente={() => pos.asignarCliente(null)}
                         tieneDescuentoGlobal={!!pos.carrito.descuentoGlobal}
                         puedeDescontar={hasPermission('pos.descuento') || hasPermission('pos.descuento.autorizar')}
                         puedePrecuentas={hasPermission('pos.precuentas')}
@@ -256,6 +260,20 @@ export default function PosPage() {
                 }}
             />
 
+            {eligiendoCliente && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setEligiendoCliente(false)}>
+                    <div className="w-full max-w-lg space-y-3 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-lg font-semibold">Cliente de la venta</h2>
+                                <p className="text-sm text-gray-500">Para venderle al crédito o sacar el ticket a su nombre. Si tiene límite de crédito, al cobrar aparece «Crédito».</p>
+                            </div>
+                            <button type="button" onClick={() => setEligiendoCliente(false)} className="rounded-lg px-2 py-1 text-gray-400 hover:bg-gray-100" aria-label="Cerrar">✕</button>
+                        </div>
+                        <ClienteBuscador autoFocus onSelect={(c) => { pos.asignarCliente(c); setEligiendoCliente(false); }} />
+                    </div>
+                </div>
+            )}
             <CobroModal
                 isOpen={pos.cobrando}
                 total={pos.porCobrar}

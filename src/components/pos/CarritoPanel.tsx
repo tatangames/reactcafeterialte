@@ -24,13 +24,16 @@ interface Props {
     onGuardarPrecuenta: () => void;
     onVaciar: () => void;
     onCobrar: () => void;
+    // Cliente de la venta (crédito, ticket a su nombre, historial). Sin estas, no se puede cambiar
+    onElegirCliente?: () => void;
+    onQuitarCliente?: () => void;
 }
 
 // Panel derecho del POS: líneas del carrito, totales y acciones
 export default function CarritoPanel({
     lineas, totales, precuenta, cliente, tieneDescuentoGlobal, puedeDescontar, puedePrecuentas,
     onCantidad, onEditarCantidad, onDescuentoLinea, onDescuentoGlobal, onGuardarPrecuenta, onVaciar, onCobrar,
-    onEditarLinea, onIngredientes, agregandoA, onEnviarComanda, onNoAgregar,
+    onEditarLinea, onIngredientes, agregandoA, onEnviarComanda, onNoAgregar, onElegirCliente, onQuitarCliente,
 }: Props) {
     const vacio = lineas.length === 0;
     const especial = precuenta?.tipo === "especial";
@@ -48,15 +51,28 @@ export default function CarritoPanel({
                 )}
             </div>
 
-            {/* Ya no se asigna cliente a mano: solo se muestra el del encargo que se entrega */}
-            {cliente && (
-                <div className="border-b border-gray-100 bg-blue-50/60 px-4 py-2">
-                    <p className="truncate text-sm font-semibold text-blue-800">👤 {cliente.nombre}</p>
-                    <p className="text-xs text-blue-700/80">
-                        {cliente.limite_credito > 0 ? `Crédito disponible ${dinero(cliente.credito_disponible)}` : "Sin crédito"}
-                        {cliente.saldo > 0 ? ` · debe ${dinero(cliente.saldo)}` : ""}
-                    </p>
+            {/* Cliente de la venta: para venderle al crédito o el ticket a su nombre. El del encargo no se cambia */}
+            {cliente ? (
+                <div className="flex items-center gap-2 border-b border-gray-100 bg-blue-50/60 px-4 py-2">
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-blue-800">👤 {cliente.nombre}</p>
+                        <p className="text-xs text-blue-700/80">
+                            {cliente.limite_credito > 0 ? `Crédito disponible ${dinero(cliente.credito_disponible)}` : "Sin crédito"}
+                            {cliente.saldo > 0 ? ` · debe ${dinero(cliente.saldo)}` : ""}
+                        </p>
+                    </div>
+                    {!especial && !agregandoA && onElegirCliente && (
+                        <button type="button" onClick={onElegirCliente} className="rounded-lg px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">Cambiar</button>
+                    )}
+                    {!especial && !agregandoA && onQuitarCliente && (
+                        <button type="button" onClick={onQuitarCliente} className="rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">Quitar</button>
+                    )}
                 </div>
+            ) : !especial && !agregandoA && onElegirCliente && (
+                <button type="button" onClick={onElegirCliente}
+                    className="flex w-full items-center gap-2 border-b border-gray-100 px-4 py-2.5 text-left text-sm font-medium text-blue-700 hover:bg-blue-50">
+                    👤 Agregar cliente <span className="font-normal text-gray-500">· al crédito o ticket a su nombre</span>
+                </button>
             )}
 
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
