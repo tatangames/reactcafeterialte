@@ -26,7 +26,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    name: "Usuarios y seguridad1",
+    name: "Usuarios y seguridad",
     icon:  <CustomIcon
         src="/images/sidebar/config-user.svg"
         alt="Usuarios y seguridad"
