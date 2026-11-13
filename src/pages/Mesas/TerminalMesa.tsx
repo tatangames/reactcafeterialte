@@ -419,7 +419,8 @@ export default function TerminalMesa() {
                                                     {p.disponible === null && agotadoMesa(p) && (
                                                         <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">Agotado</span>
                                                     )}
-                                                    {p.disponible !== null && (verExistencias || p.disponible <= 0) && (
+                                                    {/* «Permitir vender sin existencia»: ni cantidad ni «Agotado» (queda en negativo a propósito) */}
+                                                    {p.disponible !== null && !p.permite_sin_existencia && (verExistencias || p.disponible <= 0) && (
                                                         <span title={p.disponible !== p.stock ? `Existencia ${cantidad(p.stock)}; el resto está en otras cuentas abiertas` : 'Existencia'}
                                                             className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                                                                 p.disponible <= 0 ? 'bg-red-600 text-white' : p.bajo_minimo ? 'bg-amber-400 text-gray-900' : 'bg-gray-100 text-gray-700'

@@ -36,7 +36,8 @@ function TarjetaProducto({ producto, bloqueado, verExistencia, onClick }: { prod
                     ? <img src={STORAGE_URL + producto.imagen} alt="" className="h-full w-full object-cover" loading="lazy" />
                     : <div className="flex h-full items-center justify-center text-3xl" style={{ color: producto.color || '#D1D5DB' }}>●</div>}
                 {/* Sin el permiso pos.ver_existencias solo se avisa lo agotado, no la cantidad */}
-                {((producto.controla_stock && verExistencia) || agotado) && (
+                {/* «Permitir vender sin existencia»: la cantidad no dice nada (queda en negativo a propósito) */}
+                {((producto.controla_stock && !producto.permite_sin_existencia && verExistencia) || agotado) && (
                     <span className={`absolute right-1.5 top-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                         agotado ? 'bg-red-600 text-white' : producto.bajo_minimo ? 'bg-amber-400 text-gray-900' : 'bg-white/90 text-gray-700'
                     }`}>
