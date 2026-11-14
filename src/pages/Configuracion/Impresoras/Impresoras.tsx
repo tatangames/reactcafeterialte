@@ -64,7 +64,7 @@ export default function Impresoras() {
 
                             {form.conexion === "dispositivo" && (
                                 <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                                    Para el servidor en la nube: el ticket queda en una cola y lo manda a la impresora la tablet que tiene activado «Esta tablet imprime» (Ajustes → Impresoras en la tablet). Desde este navegador se imprime con el respaldo del navegador.
+                                    Para el servidor en la nube: el ticket queda en una cola y lo manda a la impresora la primera tablet del local que revise la cola (todas las tablets imprimen, no hay que activar nada). Desde este navegador se imprime con el respaldo del navegador.
                                 </p>
                             )}
                             {form.conexion !== "windows" ? (
